@@ -1,0 +1,35 @@
+package com.bsuir.Activity_tracker_server.profile
+
+import jakarta.validation.Valid
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
+
+@RestController
+@RequestMapping("/api/me")
+class ProfileController(
+    private val profileService: ProfileService,
+) {
+
+    @GetMapping("/profile")
+    fun getProfile(@AuthenticationPrincipal jwt: Jwt): UserProfileResponse =
+        profileService.getProfile(extractUserId(jwt))
+
+    @PutMapping("/profile")
+    fun upsertProfile(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: UpsertProfileRequest,
+    ): UserProfileResponse = profileService.upsertProfile(extractUserId(jwt), request)
+
+    @GetMapping("/bmr")
+    fun calculateBmr(@AuthenticationPrincipal jwt: Jwt): BmrResponse =
+        profileService.calculateBmr(extractUserId(jwt))
+
+    private fun extractUserId(jwt: Jwt): UUID = UUID.fromString(jwt.subject)
+}
+

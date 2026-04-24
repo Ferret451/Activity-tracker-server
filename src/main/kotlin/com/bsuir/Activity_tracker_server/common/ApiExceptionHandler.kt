@@ -3,6 +3,8 @@ package com.bsuir.Activity_tracker_server.common
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
 import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
+import com.bsuir.Activity_tracker_server.goal.exception.GoalNotFoundException
+import com.bsuir.Activity_tracker_server.profile.exception.ProfileNotFoundException
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.http.HttpStatus
@@ -18,6 +20,14 @@ class ApiExceptionHandler {
     @ExceptionHandler(UserNotFoundException::class)
     fun handleUserNotFound(exception: UserNotFoundException): ProblemDetail =
         buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "User was not found")
+
+    @ExceptionHandler(ProfileNotFoundException::class)
+    fun handleProfileNotFound(exception: ProfileNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Profile was not found")
+
+    @ExceptionHandler(GoalNotFoundException::class)
+    fun handleGoalNotFound(exception: GoalNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Goal was not found")
 
     @ExceptionHandler(DuplicateUserFieldException::class)
     fun handleDuplicateUserField(exception: DuplicateUserFieldException): ProblemDetail =
