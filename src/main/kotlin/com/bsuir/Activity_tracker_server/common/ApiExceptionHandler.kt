@@ -1,5 +1,7 @@
 package com.bsuir.Activity_tracker_server.common
 
+import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
+import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.http.HttpStatus
@@ -19,6 +21,14 @@ class ApiExceptionHandler {
     @ExceptionHandler(DuplicateUserFieldException::class)
     fun handleDuplicateUserField(exception: DuplicateUserFieldException): ProblemDetail =
         buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "User already exists")
+
+    @ExceptionHandler(InvalidCredentialsException::class)
+    fun handleInvalidCredentials(exception: InvalidCredentialsException): ProblemDetail =
+        buildProblemDetail(HttpStatus.UNAUTHORIZED, exception.message ?: "Invalid credentials")
+
+    @ExceptionHandler(InvalidRefreshTokenException::class)
+    fun handleInvalidRefreshToken(exception: InvalidRefreshTokenException): ProblemDetail =
+        buildProblemDetail(HttpStatus.UNAUTHORIZED, exception.message ?: "Invalid refresh token")
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(exception: MethodArgumentNotValidException): ProblemDetail {

@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.user
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.data.repository.findByIdOrNull
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -10,6 +11,7 @@ import java.util.UUID
 @Service
 class UserService(
     private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder,
 ) {
     @Transactional(readOnly = true)
     fun getAll(): List<UserResponse> = userRepository.findAll()
@@ -22,6 +24,7 @@ class UserService(
 
     @Transactional
     fun create(request: CreateUserRequest): UserResponse {
+        val rawPassword = requireNotNull(request.password)
         ensureUniqueEmail(request.email)
         ensureUniqueUsername(request.username)
 
@@ -30,6 +33,7 @@ class UserService(
             username = request.username.trim(),
             firstName = request.firstName.trim(),
             lastName = request.lastName.trim(),
+            passwordHash = requireNotNull(passwordEncoder.encode(rawPassword)),
         )
 
         return userRepository.save(user).toResponse()

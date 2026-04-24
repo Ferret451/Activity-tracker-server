@@ -28,6 +28,9 @@ class User(
     @Column(name = "last_name", nullable = false, length = 100)
     var lastName: String,
 
+    @Column(name = "password_hash", nullable = false, length = 255)
+    var passwordHash: String,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

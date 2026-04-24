@@ -23,6 +23,10 @@ data class CreateUserRequest(
     @field:NotBlank
     @field:Size(max = 100)
     val lastName: String,
+
+    @field:NotBlank
+    @field:Size(min = 8, max = 100)
+    val password: String,
 )
 
 data class UpdateUserRequest(
