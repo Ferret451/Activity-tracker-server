@@ -38,3 +38,7 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+# Local secrets file for JWT and other sensitive config
+/src/main/resources/application-secrets.properties
+
