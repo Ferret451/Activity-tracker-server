@@ -2,6 +2,7 @@ package com.bsuir.Activity_tracker_server.common
 
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
+import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.http.HttpStatus
@@ -37,6 +38,31 @@ class ApiExceptionHandler {
 
         val detail = buildProblemDetail(HttpStatus.BAD_REQUEST, "Validation failed")
         detail.setProperty("errors", errors)
+        return detail
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(exception: IllegalArgumentException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Invalid request")
+
+    @ExceptionHandler(ExternalFoodApiException::class)
+    fun handleExternalFoodApi(exception: ExternalFoodApiException): ProblemDetail {
+        val status = when (exception.statusCode.value()) {
+            400 -> HttpStatus.BAD_REQUEST
+            404 -> HttpStatus.NOT_FOUND
+            429 -> HttpStatus.TOO_MANY_REQUESTS
+            else -> HttpStatus.BAD_GATEWAY
+        }
+
+        val detail = buildProblemDetail(
+            status,
+            "Food provider request failed (status ${exception.statusCode.value()})",
+        )
+
+        if (!exception.responseBody.isNullOrBlank()) {
+            detail.setProperty("upstreamError", exception.responseBody)
+        }
+
         return detail
     }
 
