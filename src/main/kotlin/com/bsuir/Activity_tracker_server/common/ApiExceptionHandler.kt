@@ -1,5 +1,9 @@
 package com.bsuir.Activity_tracker_server.common
 
+import com.bsuir.Activity_tracker_server.activity.exception.ActivityRecordNotFoundException
+import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeInUseException
+import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeNotFoundException
+import com.bsuir.Activity_tracker_server.activity.exception.DuplicateActivityTypeException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
 import com.bsuir.Activity_tracker_server.finance.exception.DuplicateFinanceCategoryException
@@ -19,6 +23,22 @@ import java.net.URI
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+
+    @ExceptionHandler(ActivityTypeNotFoundException::class)
+    fun handleActivityTypeNotFound(exception: ActivityTypeNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Activity type was not found")
+
+    @ExceptionHandler(ActivityRecordNotFoundException::class)
+    fun handleActivityRecordNotFound(exception: ActivityRecordNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Activity record was not found")
+
+    @ExceptionHandler(DuplicateActivityTypeException::class)
+    fun handleDuplicateActivityType(exception: DuplicateActivityTypeException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Activity type already exists")
+
+    @ExceptionHandler(ActivityTypeInUseException::class)
+    fun handleActivityTypeInUse(exception: ActivityTypeInUseException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Activity type is used by existing records")
 
     @ExceptionHandler(UserNotFoundException::class)
     fun handleUserNotFound(exception: UserNotFoundException): ProblemDetail =
