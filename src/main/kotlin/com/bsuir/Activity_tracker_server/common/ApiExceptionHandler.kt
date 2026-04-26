@@ -11,6 +11,13 @@ import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryNotFou
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
 import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
 import com.bsuir.Activity_tracker_server.goal.exception.GoalNotFoundException
+import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateFoodItemException
+import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateMealTypeException
+import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemInUseException
+import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemNotFoundException
+import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeInUseException
+import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeNotFoundException
+import com.bsuir.Activity_tracker_server.nutrition.exception.NutritionRecordNotFoundException
 import com.bsuir.Activity_tracker_server.profile.exception.ProfileNotFoundException
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
@@ -39,6 +46,34 @@ class ApiExceptionHandler {
     @ExceptionHandler(ActivityTypeInUseException::class)
     fun handleActivityTypeInUse(exception: ActivityTypeInUseException): ProblemDetail =
         buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Activity type is used by existing records")
+
+    @ExceptionHandler(MealTypeNotFoundException::class)
+    fun handleMealTypeNotFound(exception: MealTypeNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Meal type was not found")
+
+    @ExceptionHandler(FoodItemNotFoundException::class)
+    fun handleFoodItemNotFound(exception: FoodItemNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Food item was not found")
+
+    @ExceptionHandler(NutritionRecordNotFoundException::class)
+    fun handleNutritionRecordNotFound(exception: NutritionRecordNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Nutrition record was not found")
+
+    @ExceptionHandler(DuplicateMealTypeException::class)
+    fun handleDuplicateMealType(exception: DuplicateMealTypeException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Meal type already exists")
+
+    @ExceptionHandler(DuplicateFoodItemException::class)
+    fun handleDuplicateFoodItem(exception: DuplicateFoodItemException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Food item already exists")
+
+    @ExceptionHandler(MealTypeInUseException::class)
+    fun handleMealTypeInUse(exception: MealTypeInUseException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Meal type is used by existing records")
+
+    @ExceptionHandler(FoodItemInUseException::class)
+    fun handleFoodItemInUse(exception: FoodItemInUseException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Food item is used by existing records")
 
     @ExceptionHandler(UserNotFoundException::class)
     fun handleUserNotFound(exception: UserNotFoundException): ProblemDetail =
