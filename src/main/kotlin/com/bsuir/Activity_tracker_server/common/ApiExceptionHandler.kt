@@ -129,8 +129,10 @@ class ApiExceptionHandler {
     fun handleExternalFoodApi(exception: ExternalFoodApiException): ProblemDetail {
         val status = when (exception.statusCode.value()) {
             400 -> HttpStatus.BAD_REQUEST
+            401 -> HttpStatus.UNAUTHORIZED
             404 -> HttpStatus.NOT_FOUND
             429 -> HttpStatus.TOO_MANY_REQUESTS
+            503 -> HttpStatus.SERVICE_UNAVAILABLE
             else -> HttpStatus.BAD_GATEWAY
         }
 

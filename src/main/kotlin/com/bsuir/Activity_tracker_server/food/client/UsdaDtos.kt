@@ -57,3 +57,29 @@ data class UsdaMeasureUnit(
     val name: String? = null,
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class UsdaSearchRequest(
+    val query: String,
+    val dataType: List<String> = emptyList(),
+    val pageSize: Int,
+    val pageNumber: Int,
+    val sortBy: String? = null,
+    val sortOrder: String? = null,
+    val brandOwner: String? = null,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class UsdaFoodsRequest(
+    val fdcIds: List<Long>,
+    val format: String? = null,
+    val nutrients: List<Long> = emptyList(),
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class UsdaFoodsListRequest(
+    val dataType: List<String> = emptyList(),
+    val pageSize: Int,
+    val pageNumber: Int,
+    val sortBy: String? = null,
+)
+

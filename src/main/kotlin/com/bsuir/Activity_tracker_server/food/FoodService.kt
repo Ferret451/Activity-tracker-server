@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.food
 import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
+import com.bsuir.Activity_tracker_server.food.client.UsdaSearchResponse
 import org.springframework.stereotype.Service
 
 @Service
@@ -10,7 +11,7 @@ class FoodService(
     private val foodDataClient: FoodDataClient,
 ) {
 
-    fun search(
+    fun searchGet(
         query: String,
         pageNumber: Int,
         pageSize: Int,
@@ -19,7 +20,7 @@ class FoodService(
         sortOrder: String?,
         brandOwner: String?,
     ): FoodSearchResponse {
-        val response = foodDataClient.searchFoods(
+        val response = foodDataClient.searchFoodsGet(
             query = query.trim(),
             pageNumber = pageNumber,
             pageSize = pageSize,
@@ -29,6 +30,112 @@ class FoodService(
             brandOwner = brandOwner?.trim()?.takeIf(String::isNotBlank),
         )
 
+        return toSearchResponse(response)
+    }
+
+    fun searchPost(
+        query: String,
+        pageNumber: Int,
+        pageSize: Int,
+        dataTypes: List<String>,
+        sortBy: String?,
+        sortOrder: String?,
+        brandOwner: String?,
+    ): FoodSearchResponse {
+        val response = foodDataClient.searchFoodsPost(
+            query = query.trim(),
+            pageNumber = pageNumber,
+            pageSize = pageSize,
+            dataTypes = dataTypes.map(String::trim).filter(String::isNotBlank),
+            sortBy = sortBy?.trim()?.takeIf(String::isNotBlank),
+            sortOrder = sortOrder?.trim()?.lowercase()?.takeIf(String::isNotBlank),
+            brandOwner = brandOwner?.trim()?.takeIf(String::isNotBlank),
+        )
+
+        return toSearchResponse(response)
+    }
+
+    fun listGet(
+        pageNumber: Int,
+        pageSize: Int,
+        dataTypes: List<String>,
+        sortBy: String?,
+    ): List<FoodSummaryResponse> =
+        foodDataClient.listFoodsGet(
+            pageNumber = pageNumber,
+            pageSize = pageSize,
+            dataTypes = dataTypes.map(String::trim).filter(String::isNotBlank),
+            sortBy = sortBy?.trim()?.takeIf(String::isNotBlank),
+        ).map(::toSummaryResponse)
+
+    fun listPost(
+        pageNumber: Int,
+        pageSize: Int,
+        dataTypes: List<String>,
+        sortBy: String?,
+    ): List<FoodSummaryResponse> =
+        foodDataClient.listFoodsPost(
+            pageNumber = pageNumber,
+            pageSize = pageSize,
+            dataTypes = dataTypes.map(String::trim).filter(String::isNotBlank),
+            sortBy = sortBy?.trim()?.takeIf(String::isNotBlank),
+        ).map(::toSummaryResponse)
+
+    fun getById(
+        fdcId: Long,
+        format: String?,
+        nutrients: List<Long>,
+    ): FoodDetailsResponse =
+        toDetailsResponse(
+            foodDataClient.getFoodById(
+                fdcId = fdcId,
+                format = normalizeFormat(format),
+                nutrients = nutrients.distinct(),
+            ),
+        )
+
+    fun lookupByIdsGet(
+        fdcIds: List<Long>,
+        format: String?,
+        nutrients: List<Long>,
+    ): List<FoodDetailsResponse> =
+        foodDataClient.getFoodsByIdsGet(
+            fdcIds = fdcIds.distinct(),
+            format = normalizeFormat(format),
+            nutrients = nutrients.distinct(),
+        ).map(::toDetailsResponse)
+
+    fun lookupByIdsPost(
+        fdcIds: List<Long>,
+        format: String?,
+        nutrients: List<Long>,
+    ): List<FoodDetailsResponse> =
+        foodDataClient.getFoodsByIdsPost(
+            fdcIds = fdcIds.distinct(),
+            format = normalizeFormat(format),
+            nutrients = nutrients.distinct(),
+        ).map(::toDetailsResponse)
+
+    @Deprecated("Use searchGet")
+    fun search(
+        query: String,
+        pageNumber: Int,
+        pageSize: Int,
+        dataTypes: List<String>,
+        sortBy: String?,
+        sortOrder: String?,
+        brandOwner: String?,
+    ): FoodSearchResponse = searchGet(query, pageNumber, pageSize, dataTypes, sortBy, sortOrder, brandOwner)
+
+    @Deprecated("Use getById with format/nutrients")
+    fun getById(fdcId: Long): FoodDetailsResponse =
+        getById(fdcId, null, emptyList())
+
+    @Deprecated("Use lookupByIdsPost")
+    fun lookupByIds(fdcIds: List<Long>): List<FoodDetailsResponse> =
+        lookupByIdsPost(fdcIds, null, emptyList())
+
+    private fun toSearchResponse(response: UsdaSearchResponse): FoodSearchResponse {
         return FoodSearchResponse(
             totalHits = response.totalHits,
             currentPage = response.currentPage,
@@ -37,11 +144,8 @@ class FoodService(
         )
     }
 
-    fun getById(fdcId: Long): FoodDetailsResponse =
-        toDetailsResponse(foodDataClient.getFoodById(fdcId))
-
-    fun lookupByIds(fdcIds: List<Long>): List<FoodDetailsResponse> =
-        foodDataClient.getFoodsByIds(fdcIds.distinct()).map(::toDetailsResponse)
+    private fun normalizeFormat(format: String?): String? =
+        format?.trim()?.lowercase()?.takeIf { it == "abridged" || it == "full" }
 
     private fun toSummaryResponse(food: UsdaFoodItemResponse): FoodSummaryResponse =
         FoodSummaryResponse(
@@ -132,4 +236,3 @@ class FoodService(
         val amount: Double,
     )
 }
-

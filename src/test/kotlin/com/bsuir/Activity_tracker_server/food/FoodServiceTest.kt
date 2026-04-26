@@ -12,7 +12,7 @@ class FoodServiceTest {
     @Test
     fun `search maps USDA nutrients into calories and macros`() {
         val client = object : FoodDataClient {
-            override fun searchFoods(
+            override fun searchFoodsGet(
                 query: String,
                 pageNumber: Int,
                 pageSize: Int,
@@ -39,15 +39,51 @@ class FoodServiceTest {
                     ),
                 )
 
-            override fun getFoodById(fdcId: Long): UsdaFoodItemResponse =
-                throw UnsupportedOperationException()
+            override fun searchFoodsPost(
+                query: String,
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+                sortOrder: String?,
+                brandOwner: String?,
+            ): UsdaSearchResponse = throw UnsupportedOperationException()
 
-            override fun getFoodsByIds(fdcIds: List<Long>): List<UsdaFoodItemResponse> =
-                throw UnsupportedOperationException()
+            override fun listFoodsGet(
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun listFoodsPost(
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun getFoodById(
+                fdcId: Long,
+                format: String?,
+                nutrients: List<Long>,
+            ): UsdaFoodItemResponse = throw UnsupportedOperationException()
+
+            override fun getFoodsByIdsGet(
+                fdcIds: List<Long>,
+                format: String?,
+                nutrients: List<Long>,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun getFoodsByIdsPost(
+                fdcIds: List<Long>,
+                format: String?,
+                nutrients: List<Long>,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
         }
 
         val service = FoodService(client)
-        val result = service.search("sample", 1, 25, emptyList(), null, null, null)
+        val result = service.searchGet("sample", 1, 25, emptyList(), null, null, null)
 
         assertEquals(1, result.foods.size)
         assertEquals(200.0, result.foods.first().nutrients.caloriesKcal)
@@ -55,5 +91,76 @@ class FoodServiceTest {
         assertEquals(7.5, result.foods.first().nutrients.fatG)
         assertEquals(22.3, result.foods.first().nutrients.carbsG)
     }
-}
 
+    @Test
+    fun `getById forwards format and nutrient filters to client`() {
+        val client = object : FoodDataClient {
+            override fun searchFoodsGet(
+                query: String,
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+                sortOrder: String?,
+                brandOwner: String?,
+            ): UsdaSearchResponse = throw UnsupportedOperationException()
+
+            override fun searchFoodsPost(
+                query: String,
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+                sortOrder: String?,
+                brandOwner: String?,
+            ): UsdaSearchResponse = throw UnsupportedOperationException()
+
+            override fun listFoodsGet(
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun listFoodsPost(
+                pageNumber: Int,
+                pageSize: Int,
+                dataTypes: List<String>,
+                sortBy: String?,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun getFoodById(
+                fdcId: Long,
+                format: String?,
+                nutrients: List<Long>,
+            ): UsdaFoodItemResponse {
+                assertEquals(12345L, fdcId)
+                assertEquals("abridged", format)
+                assertEquals(listOf(203L, 204L), nutrients)
+                return UsdaFoodItemResponse(
+                    fdcId = 12345L,
+                    description = "Filtered Food",
+                    foodNutrients = emptyList(),
+                )
+            }
+
+            override fun getFoodsByIdsGet(
+                fdcIds: List<Long>,
+                format: String?,
+                nutrients: List<Long>,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+
+            override fun getFoodsByIdsPost(
+                fdcIds: List<Long>,
+                format: String?,
+                nutrients: List<Long>,
+            ): List<UsdaFoodItemResponse> = throw UnsupportedOperationException()
+        }
+
+        val service = FoodService(client)
+        val result = service.getById(12345L, "ABRIDGED", listOf(203L, 204L, 203L))
+
+        assertEquals(12345L, result.fdcId)
+        assertEquals("Filtered Food", result.description)
+    }
+}
