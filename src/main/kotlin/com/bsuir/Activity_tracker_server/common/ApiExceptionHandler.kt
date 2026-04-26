@@ -2,6 +2,9 @@ package com.bsuir.Activity_tracker_server.common
 
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
+import com.bsuir.Activity_tracker_server.finance.exception.DuplicateFinanceCategoryException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryNotFoundException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
 import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
 import com.bsuir.Activity_tracker_server.goal.exception.GoalNotFoundException
 import com.bsuir.Activity_tracker_server.profile.exception.ProfileNotFoundException
@@ -29,9 +32,21 @@ class ApiExceptionHandler {
     fun handleGoalNotFound(exception: GoalNotFoundException): ProblemDetail =
         buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Goal was not found")
 
+    @ExceptionHandler(FinanceCategoryNotFoundException::class)
+    fun handleFinanceCategoryNotFound(exception: FinanceCategoryNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Finance category was not found")
+
+    @ExceptionHandler(FinanceRecordNotFoundException::class)
+    fun handleFinanceRecordNotFound(exception: FinanceRecordNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Finance record was not found")
+
     @ExceptionHandler(DuplicateUserFieldException::class)
     fun handleDuplicateUserField(exception: DuplicateUserFieldException): ProblemDetail =
         buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "User already exists")
+
+    @ExceptionHandler(DuplicateFinanceCategoryException::class)
+    fun handleDuplicateFinanceCategory(exception: DuplicateFinanceCategoryException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Finance category already exists")
 
     @ExceptionHandler(InvalidCredentialsException::class)
     fun handleInvalidCredentials(exception: InvalidCredentialsException): ProblemDetail =
