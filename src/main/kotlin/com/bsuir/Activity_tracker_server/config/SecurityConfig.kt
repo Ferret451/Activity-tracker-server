@@ -67,8 +67,11 @@ class SecurityConfig {
             .csrf(AbstractHttpConfigurer<*, *>::disable)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/api/auth/**").permitAll()
-                    .anyRequest().authenticated()
+                it.requestMatchers(
+                    "/api/auth/**",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                ).permitAll().anyRequest().authenticated()
             }
             .oauth2ResourceServer {
                 it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter) }
