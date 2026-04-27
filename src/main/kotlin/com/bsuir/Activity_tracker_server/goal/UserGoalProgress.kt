@@ -22,7 +22,7 @@ class UserGoalProgress(
     @JoinColumn(name = "goal_id", nullable = false)
     var goal: UserGoal,
 
-    @Column(name = "value", nullable = false)
+    @Column(name = "current_value", nullable = false)
     var value: Double,
 
     @Column(name = "note", length = 500)
