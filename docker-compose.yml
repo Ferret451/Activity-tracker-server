@@ -12,5 +12,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: activity-tracker-server
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/activity_tracker
+      DB_USERNAME: activity_user
+      DB_PASSWORD: activity_password
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      FOOD_API_KEY: ${FOOD_API_KEY:-}
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres_data:

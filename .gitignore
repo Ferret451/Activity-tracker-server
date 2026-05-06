@@ -1,4 +1,4 @@
-HELP.md
+info/
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -42,3 +42,5 @@ out/
 # Local secrets file for JWT and other sensitive config
 /src/main/resources/application-secrets.properties
 
+# Local environment overrides
+.env
