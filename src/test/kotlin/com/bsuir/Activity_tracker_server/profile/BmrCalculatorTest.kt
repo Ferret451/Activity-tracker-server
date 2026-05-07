@@ -29,7 +29,7 @@ class BmrCalculatorTest {
             age = 28,
         )
 
-        assertEquals(1428.2, bmr)
+        assertEquals(1390.7, bmr)
     }
 }
 

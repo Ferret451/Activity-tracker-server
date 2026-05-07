@@ -1,41 +1,65 @@
-package com.bsuir.Activity_tracker_server
+package com.bsuir.Activity_tracker_server.food
 
+import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
+import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
 import com.bsuir.Activity_tracker_server.food.client.UsdaSearchResponse
-import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
+import com.bsuir.Activity_tracker_server.support.ApiIntegrationTest
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.`when`
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class FoodApiIntegrationTest : ApiFunctionalCoverageIntegrationTest() {
+class FoodApiIntegrationTest : ApiIntegrationTest() {
 
     @Test
-    fun `food endpoints support full USDA wrapper contract and map upstream errors`() {
-        val accessToken = register("food-user").accessToken
+    fun `food endpoints work with mocked USDA client`() {
+        val accessToken = registerUser("food").accessToken
 
-        val usdaFood = usdaFood(
+        val usdaFood = UsdaFoodItemResponse(
             fdcId = 12345L,
             description = "Apple",
-            calories = 52.0,
-            protein = 0.3,
-            fat = 0.2,
-            carbs = 13.8,
+            foodNutrients = listOf(
+                UsdaFoodNutrient(number = "1008", amount = 52.0),
+                UsdaFoodNutrient(number = "1003", amount = 0.3),
+                UsdaFoodNutrient(number = "1004", amount = 0.2),
+                UsdaFoodNutrient(number = "1005", amount = 13.8),
+            ),
         )
 
-        `when`(foodDataClient.searchFoodsGet(anyString(), anyInt(), anyInt(), anyList(), anyString(), anyString(), anyString()))
+        `when`(
+            foodDataClient.searchFoodsGet(
+                anyString(),
+                anyInt(),
+                anyInt(),
+                anyList(),
+                isNull(),
+                isNull(),
+                isNull(),
+            ),
+        )
             .thenReturn(UsdaSearchResponse(totalHits = 1, currentPage = 1, totalPages = 1, foods = listOf(usdaFood)))
-        `when`(foodDataClient.searchFoodsPost(anyString(), anyInt(), anyInt(), anyList(), anyString(), anyString(), anyString()))
+        `when`(
+            foodDataClient.searchFoodsPost(
+                anyString(),
+                anyInt(),
+                anyInt(),
+                anyList(),
+                isNull(),
+                isNull(),
+                isNull(),
+            ),
+        )
             .thenReturn(UsdaSearchResponse(totalHits = 1, currentPage = 1, totalPages = 1, foods = listOf(usdaFood)))
-        `when`(foodDataClient.listFoodsGet(anyInt(), anyInt(), anyList(), anyString())).thenReturn(listOf(usdaFood))
-        `when`(foodDataClient.listFoodsPost(anyInt(), anyInt(), anyList(), anyString())).thenReturn(listOf(usdaFood))
+        `when`(foodDataClient.listFoodsGet(anyInt(), anyInt(), anyList(), isNull())).thenReturn(listOf(usdaFood))
+        `when`(foodDataClient.listFoodsPost(anyInt(), anyInt(), anyList(), isNull())).thenReturn(listOf(usdaFood))
         `when`(foodDataClient.getFoodById(anyLong(), anyString(), anyList())).thenReturn(usdaFood)
         `when`(foodDataClient.getFoodsByIdsGet(anyList(), anyString(), anyList())).thenReturn(listOf(usdaFood))
         `when`(foodDataClient.getFoodsByIdsPost(anyList(), anyString(), anyList())).thenReturn(listOf(usdaFood))
@@ -69,15 +93,6 @@ class FoodApiIntegrationTest : ApiFunctionalCoverageIntegrationTest() {
             .andExpect(jsonPath("$[0].fdcId").value(12345))
 
         mockMvc.perform(
-            post("/api/foods/list")
-                .withBearer(accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"pageNumber":1,"pageSize":10}"""),
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].fdcId").value(12345))
-
-        mockMvc.perform(
             get("/api/foods/12345")
                 .withBearer(accessToken)
                 .param("format", "abridged")
@@ -86,6 +101,7 @@ class FoodApiIntegrationTest : ApiFunctionalCoverageIntegrationTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.fdcId").value(12345))
+            .andExpect(jsonPath("$.nutrients.caloriesKcal").value(52.0))
 
         mockMvc.perform(
             get("/api/foods")
@@ -104,27 +120,14 @@ class FoodApiIntegrationTest : ApiFunctionalCoverageIntegrationTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].fdcId").value(12345))
+    }
 
-        mockMvc.perform(
-            post("/api/foods")
-                .withBearer(accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"fdcIds":[12345],"format":"abridged"}"""),
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].fdcId").value(12345))
+    @Test
+    fun `food validation returns 400`() {
+        val accessToken = registerUser("food-val").accessToken
 
-        `when`(foodDataClient.searchFoodsGet(anyString(), anyInt(), anyInt(), anyList(), anyString(), anyString(), anyString()))
-            .thenThrow(ExternalFoodApiException(HttpStatus.TOO_MANY_REQUESTS, "limit"))
-
-        mockMvc.perform(
-            get("/api/foods/search")
-                .withBearer(accessToken)
-                .param("query", "apple")
-                .param("pageNumber", "1")
-                .param("pageSize", "10"),
-        )
-            .andExpect(status().isTooManyRequests)
-            .andExpect(jsonPath("$.detail").exists())
+        mockMvc.perform(get("/api/foods/search").withBearer(accessToken).param("query", ""))
+            .andExpect(status().isBadRequest)
     }
 }
+

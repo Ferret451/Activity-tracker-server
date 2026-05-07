@@ -13,6 +13,7 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.springframework.data.domain.Persistable
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -51,10 +52,16 @@ class UserProfile(
 
     @Column(name = "updated_at", nullable = false)
     var updatedAt: OffsetDateTime? = null,
-) {
+) : Persistable<UUID> {
+
+    override fun getId(): UUID = userId
+
+    override fun isNew(): Boolean = createdAt == null
+
     @PrePersist
     fun onCreate() {
         val now = OffsetDateTime.now(ZoneOffset.UTC)
+        userId = user.id
         createdAt = now
         updatedAt = now
     }

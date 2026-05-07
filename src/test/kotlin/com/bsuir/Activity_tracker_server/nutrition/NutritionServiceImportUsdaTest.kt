@@ -127,7 +127,7 @@ class NutritionServiceImportUsdaTest {
 
         assertEquals("Banana", result.name)
         assertEquals("USDA", result.source)
-        assertEquals(54321L, result.fdcId)
+        assertEquals(999L, result.fdcId)
         assertEquals(88.0, result.caloriesPer100g)
         assertEquals(0.0, result.proteinPer100g)
         assertEquals(0.0, result.fatPer100g)

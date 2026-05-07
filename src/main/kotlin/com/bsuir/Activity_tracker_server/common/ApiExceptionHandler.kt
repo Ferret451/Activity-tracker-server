@@ -21,6 +21,7 @@ import com.bsuir.Activity_tracker_server.nutrition.exception.NutritionRecordNotF
 import com.bsuir.Activity_tracker_server.profile.exception.ProfileNotFoundException
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
+import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -120,6 +121,10 @@ class ApiExceptionHandler {
         detail.setProperty("errors", errors)
         return detail
     }
+
+    @ExceptionHandler(ConstraintViolationException::class)
+    fun handleConstraintViolation(exception: ConstraintViolationException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Validation failed")
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(exception: IllegalArgumentException): ProblemDetail =
