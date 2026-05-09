@@ -7,8 +7,13 @@ import com.bsuir.Activity_tracker_server.activity.exception.DuplicateActivityTyp
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
 import com.bsuir.Activity_tracker_server.finance.exception.DuplicateFinanceCategoryException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountInUseException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountNotFoundException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryBranchMismatchException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryNotFoundException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordBranchMismatchException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
+import com.bsuir.Activity_tracker_server.finance.exception.PrimaryFinanceAccountDeletionException
 import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
 import com.bsuir.Activity_tracker_server.goal.exception.GoalNotFoundException
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateFoodItemException
@@ -95,6 +100,26 @@ class ApiExceptionHandler {
     @ExceptionHandler(FinanceRecordNotFoundException::class)
     fun handleFinanceRecordNotFound(exception: FinanceRecordNotFoundException): ProblemDetail =
         buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Finance record was not found")
+
+    @ExceptionHandler(FinanceAccountNotFoundException::class)
+    fun handleFinanceAccountNotFound(exception: FinanceAccountNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Finance account was not found")
+
+    @ExceptionHandler(FinanceAccountInUseException::class)
+    fun handleFinanceAccountInUse(exception: FinanceAccountInUseException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Finance account is in use")
+
+    @ExceptionHandler(PrimaryFinanceAccountDeletionException::class)
+    fun handlePrimaryFinanceAccountDeletion(exception: PrimaryFinanceAccountDeletionException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Primary finance account cannot be deleted")
+
+    @ExceptionHandler(FinanceCategoryBranchMismatchException::class)
+    fun handleFinanceCategoryBranchMismatch(exception: FinanceCategoryBranchMismatchException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Category does not match operation branch")
+
+    @ExceptionHandler(FinanceRecordBranchMismatchException::class)
+    fun handleFinanceRecordBranchMismatch(exception: FinanceRecordBranchMismatchException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Record does not belong to this branch")
 
     @ExceptionHandler(DuplicateUserFieldException::class)
     fun handleDuplicateUserField(exception: DuplicateUserFieldException): ProblemDetail =

@@ -8,24 +8,59 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
-data class CreateFinanceCategoryRequest(
+data class CreateFinanceCategoryBranchRequest(
     @field:NotBlank
     @field:Size(max = 80)
     val name: String,
 
-    val operationType: FinanceOperationType,
+    val iconId: Long? = null,
+    val colorId: Long? = null,
 )
 
 data class FinanceCategoryResponse(
     val id: UUID,
     val name: String,
     val operationType: FinanceOperationType,
+    val iconId: Long?,
+    val colorId: Long?,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
 )
 
+data class CreateFinanceAccountRequest(
+    @field:NotBlank
+    @field:Size(max = 120)
+    val name: String,
+
+    val setAsPrimary: Boolean = false,
+)
+
+data class UpdateFinanceAccountRequest(
+    @field:NotBlank
+    @field:Size(max = 120)
+    val name: String,
+
+    val setAsPrimary: Boolean = false,
+)
+
+data class FinanceAccountResponse(
+    val id: UUID,
+    val name: String,
+    val isPrimary: Boolean,
+    val balance: BigDecimal,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+)
+
+data class FinanceAccountSummaryResponse(
+    val id: UUID,
+    val name: String,
+)
+
 data class CreateFinanceRecordRequest(
     val categoryId: UUID,
+
+    val accountId: UUID? = null,
 
     @field:DecimalMin(value = "0.01")
     val amount: BigDecimal,
@@ -39,6 +74,8 @@ data class CreateFinanceRecordRequest(
 data class UpdateFinanceRecordRequest(
     val categoryId: UUID,
 
+    val accountId: UUID? = null,
+
     @field:DecimalMin(value = "0.01")
     val amount: BigDecimal,
 
@@ -50,6 +87,7 @@ data class UpdateFinanceRecordRequest(
 
 data class FinanceRecordResponse(
     val id: UUID,
+    val account: FinanceAccountSummaryResponse,
     val category: FinanceCategoryResponse,
     val operationType: FinanceOperationType,
     val amount: BigDecimal,
@@ -73,10 +111,20 @@ data class FinanceSummaryResponse(
     val byCategory: List<FinanceCategorySummaryResponse>,
 )
 
-data class FinanceQueryFilter(
+data class FinanceRecordQueryFilter(
     val from: LocalDate?,
     val to: LocalDate?,
     val categoryId: UUID?,
-    val operationType: FinanceOperationType?,
+    val accountId: UUID?,
 )
 
+data class FinancePeriodReportResponse(
+    val from: LocalDate,
+    val to: LocalDate,
+    val totalIncome: BigDecimal,
+    val totalExpense: BigDecimal,
+    val net: BigDecimal,
+    val byCategory: List<FinanceCategorySummaryResponse>,
+    val incomeRecords: List<FinanceRecordResponse>,
+    val expenseRecords: List<FinanceRecordResponse>,
+)

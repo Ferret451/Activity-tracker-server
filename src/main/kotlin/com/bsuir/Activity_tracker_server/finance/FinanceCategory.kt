@@ -33,6 +33,12 @@ class FinanceCategory(
     @Column(name = "operation_type", nullable = false, length = 20)
     var operationType: FinanceOperationType,
 
+    @Column(name = "icon_id")
+    var iconId: Long? = null,
+
+    @Column(name = "color_id")
+    var colorId: Long? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

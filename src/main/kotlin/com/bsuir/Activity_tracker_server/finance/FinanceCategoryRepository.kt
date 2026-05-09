@@ -11,5 +11,10 @@ interface FinanceCategoryRepository : JpaRepository<FinanceCategory, UUID> {
         name: String,
         operationType: FinanceOperationType,
     ): Boolean
+
+    fun findAllByUser_IdAndOperationTypeOrderByCreatedAtDesc(
+        userId: UUID,
+        operationType: FinanceOperationType,
+    ): List<FinanceCategory>
 }
 

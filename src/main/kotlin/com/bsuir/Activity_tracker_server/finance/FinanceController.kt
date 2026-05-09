@@ -23,82 +23,166 @@ class FinanceController(
     private val financeService: FinanceService,
 ) {
 
-    @PostMapping("/categories")
+    @GetMapping("/accounts")
+    fun listAccounts(@AuthenticationPrincipal jwt: Jwt): List<FinanceAccountResponse> =
+        financeService.listAccounts(extractUserId(jwt))
+
+    @PostMapping("/accounts")
     @ResponseStatus(HttpStatus.CREATED)
-    fun createCategory(
+    fun createAccount(
         @AuthenticationPrincipal jwt: Jwt,
-        @Valid @RequestBody request: CreateFinanceCategoryRequest,
-    ): FinanceCategoryResponse = financeService.createCategory(extractUserId(jwt), request)
+        @Valid @RequestBody request: CreateFinanceAccountRequest,
+    ): FinanceAccountResponse =
+        financeService.createAccount(extractUserId(jwt), request)
 
-    @GetMapping("/categories")
-    fun getCategories(@AuthenticationPrincipal jwt: Jwt): List<FinanceCategoryResponse> =
-        financeService.getCategories(extractUserId(jwt))
+    @GetMapping("/accounts/{accountId}")
+    fun getAccount(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable accountId: UUID,
+    ): FinanceAccountResponse =
+        financeService.getAccount(extractUserId(jwt), accountId)
 
-    @PostMapping("/records")
+    @PutMapping("/accounts/{accountId}")
+    fun updateAccount(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable accountId: UUID,
+        @Valid @RequestBody request: UpdateFinanceAccountRequest,
+    ): FinanceAccountResponse =
+        financeService.updateAccount(extractUserId(jwt), accountId, request)
+
+    @DeleteMapping("/accounts/{accountId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteAccount(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable accountId: UUID,
+    ) {
+        financeService.deleteAccount(extractUserId(jwt), accountId)
+    }
+
+    @PostMapping("/income/categories")
     @ResponseStatus(HttpStatus.CREATED)
-    fun createRecord(
+    fun createIncomeCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: CreateFinanceCategoryBranchRequest,
+    ): FinanceCategoryResponse =
+        financeService.createCategoryForBranch(extractUserId(jwt), FinanceOperationType.INCOME, request)
+
+    @GetMapping("/income/categories")
+    fun listIncomeCategories(@AuthenticationPrincipal jwt: Jwt): List<FinanceCategoryResponse> =
+        financeService.getCategoriesForBranch(extractUserId(jwt), FinanceOperationType.INCOME)
+
+    @PostMapping("/expense/categories")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createExpenseCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: CreateFinanceCategoryBranchRequest,
+    ): FinanceCategoryResponse =
+        financeService.createCategoryForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, request)
+
+    @GetMapping("/expense/categories")
+    fun listExpenseCategories(@AuthenticationPrincipal jwt: Jwt): List<FinanceCategoryResponse> =
+        financeService.getCategoriesForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE)
+
+    @PostMapping("/income/records")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createIncomeRecord(
         @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: CreateFinanceRecordRequest,
-    ): FinanceRecordResponse = financeService.createRecord(extractUserId(jwt), request)
+    ): FinanceRecordResponse =
+        financeService.createRecordForBranch(extractUserId(jwt), FinanceOperationType.INCOME, request)
 
-    @GetMapping("/records")
-    fun getRecords(
+    @GetMapping("/income/records")
+    fun listIncomeRecords(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestParam(required = false) from: LocalDate?,
         @RequestParam(required = false) to: LocalDate?,
         @RequestParam(required = false) categoryId: UUID?,
-        @RequestParam(required = false) operationType: FinanceOperationType?,
+        @RequestParam(required = false) accountId: UUID?,
     ): List<FinanceRecordResponse> =
-        financeService.getRecords(
-            userId = extractUserId(jwt),
-            filter = FinanceQueryFilter(
-                from = from,
-                to = to,
-                categoryId = categoryId,
-                operationType = operationType,
-            ),
+        financeService.getRecordsForBranch(
+            extractUserId(jwt),
+            FinanceOperationType.INCOME,
+            FinanceRecordQueryFilter(from = from, to = to, categoryId = categoryId, accountId = accountId),
         )
 
-    @GetMapping("/records/{recordId}")
-    fun getRecord(
+    @GetMapping("/income/records/{recordId}")
+    fun getIncomeRecord(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable recordId: UUID,
-    ): FinanceRecordResponse = financeService.getRecord(extractUserId(jwt), recordId)
+    ): FinanceRecordResponse =
+        financeService.getRecordForBranch(extractUserId(jwt), FinanceOperationType.INCOME, recordId)
 
-    @PutMapping("/records/{recordId}")
-    fun updateRecord(
+    @PutMapping("/income/records/{recordId}")
+    fun updateIncomeRecord(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable recordId: UUID,
         @Valid @RequestBody request: UpdateFinanceRecordRequest,
-    ): FinanceRecordResponse = financeService.updateRecord(extractUserId(jwt), recordId, request)
+    ): FinanceRecordResponse =
+        financeService.updateRecordForBranch(extractUserId(jwt), FinanceOperationType.INCOME, recordId, request)
 
-    @DeleteMapping("/records/{recordId}")
+    @DeleteMapping("/income/records/{recordId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun deleteRecord(
+    fun deleteIncomeRecord(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable recordId: UUID,
     ) {
-        financeService.deleteRecord(extractUserId(jwt), recordId)
+        financeService.deleteRecordForBranch(extractUserId(jwt), FinanceOperationType.INCOME, recordId)
     }
 
-    @GetMapping("/summary")
-    fun getSummary(
+    @PostMapping("/expense/records")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createExpenseRecord(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: CreateFinanceRecordRequest,
+    ): FinanceRecordResponse =
+        financeService.createRecordForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, request)
+
+    @GetMapping("/expense/records")
+    fun listExpenseRecords(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestParam(required = false) from: LocalDate?,
         @RequestParam(required = false) to: LocalDate?,
         @RequestParam(required = false) categoryId: UUID?,
-        @RequestParam(required = false) operationType: FinanceOperationType?,
-    ): FinanceSummaryResponse =
-        financeService.getSummary(
-            userId = extractUserId(jwt),
-            filter = FinanceQueryFilter(
-                from = from,
-                to = to,
-                categoryId = categoryId,
-                operationType = operationType,
-            ),
+        @RequestParam(required = false) accountId: UUID?,
+    ): List<FinanceRecordResponse> =
+        financeService.getRecordsForBranch(
+            extractUserId(jwt),
+            FinanceOperationType.EXPENSE,
+            FinanceRecordQueryFilter(from = from, to = to, categoryId = categoryId, accountId = accountId),
         )
+
+    @GetMapping("/expense/records/{recordId}")
+    fun getExpenseRecord(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable recordId: UUID,
+    ): FinanceRecordResponse =
+        financeService.getRecordForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, recordId)
+
+    @PutMapping("/expense/records/{recordId}")
+    fun updateExpenseRecord(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable recordId: UUID,
+        @Valid @RequestBody request: UpdateFinanceRecordRequest,
+    ): FinanceRecordResponse =
+        financeService.updateRecordForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, recordId, request)
+
+    @DeleteMapping("/expense/records/{recordId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteExpenseRecord(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable recordId: UUID,
+    ) {
+        financeService.deleteRecordForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, recordId)
+    }
+
+    @GetMapping("/report")
+    fun getPeriodReport(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestParam from: LocalDate,
+        @RequestParam to: LocalDate,
+        @RequestParam(required = false) accountId: UUID?,
+    ): FinancePeriodReportResponse =
+        financeService.getPeriodReport(extractUserId(jwt), from, to, accountId)
 
     private fun extractUserId(jwt: Jwt): UUID = UUID.fromString(jwt.subject)
 }
-

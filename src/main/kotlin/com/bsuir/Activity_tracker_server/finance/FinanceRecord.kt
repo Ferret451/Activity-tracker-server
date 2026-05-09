@@ -31,6 +31,10 @@ class FinanceRecord(
     @JoinColumn(name = "category_id", nullable = false)
     var category: FinanceCategory,
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "account_id", nullable = false)
+    var account: FinanceAccount,
+
     @Enumerated(EnumType.STRING)
     @Column(name = "operation_type", nullable = false, length = 20)
     var operationType: FinanceOperationType,
