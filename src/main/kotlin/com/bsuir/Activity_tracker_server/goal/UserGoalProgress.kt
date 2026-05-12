@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -23,7 +24,7 @@ class UserGoalProgress(
     var goal: UserGoal,
 
     @Column(name = "current_value", nullable = false)
-    var value: Double,
+    var value: BigDecimal,
 
     @Column(name = "note", length = 500)
     var note: String? = null,

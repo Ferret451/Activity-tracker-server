@@ -19,6 +19,11 @@ data class UpsertProfileRequest(
     val sex: Sex,
 
     val activityLevel: ActivityLevel,
+
+    val calorieGoal: CalorieGoal,
+
+    @field:Min(0)
+    val dailyCalorieTargetKcal: Int? = null,
 )
 
 data class UserProfileResponse(
@@ -27,11 +32,14 @@ data class UserProfileResponse(
     val age: Int,
     val sex: Sex,
     val activityLevel: ActivityLevel,
+    val calorieGoal: CalorieGoal,
+    val dailyCalorieTargetKcal: Int?,
 )
 
 data class BmrResponse(
     val bmr: Double,
-    val dailyCalories: Double,
+    val baseDailyCalories: Double,
+    val goalAdjustedDailyCalories: Double,
 )
 
 fun UserProfile.toResponse(): UserProfileResponse = UserProfileResponse(
@@ -40,6 +48,8 @@ fun UserProfile.toResponse(): UserProfileResponse = UserProfileResponse(
     age = age,
     sex = sex,
     activityLevel = activityLevel,
+    calorieGoal = calorieGoal,
+    dailyCalorieTargetKcal = dailyCalorieTargetKcal,
 )
 
 

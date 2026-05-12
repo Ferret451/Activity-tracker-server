@@ -34,6 +34,8 @@ class ProfileService(
                 age = request.age
                 sex = request.sex
                 activityLevel = request.activityLevel
+                calorieGoal = request.calorieGoal
+                dailyCalorieTargetKcal = request.dailyCalorieTargetKcal
             }
             ?: UserProfile(
                 userId = userId,
@@ -43,6 +45,8 @@ class ProfileService(
                 age = request.age,
                 sex = request.sex,
                 activityLevel = request.activityLevel,
+                calorieGoal = request.calorieGoal,
+                dailyCalorieTargetKcal = request.dailyCalorieTargetKcal,
             )
 
         return userProfileRepository.save(profile).toResponse()
@@ -59,11 +63,17 @@ class ProfileService(
             heightCm = profile.heightCm,
             age = profile.age,
         )
-        val dailyCalories = BmrCalculator.calculateDailyCalories(bmr, profile.activityLevel)
+        val baseDailyCalories = BmrCalculator.calculateBaseDailyCalories(bmr, profile.activityLevel)
+        val goalAdjustedDailyCalories = BmrCalculator.calculateGoalAdjustedDailyCalories(
+            bmr = bmr,
+            activityLevel = profile.activityLevel,
+            calorieGoal = profile.calorieGoal,
+        )
 
         return BmrResponse(
             bmr = bmr,
-            dailyCalories = dailyCalories,
+            baseDailyCalories = baseDailyCalories,
+            goalAdjustedDailyCalories = goalAdjustedDailyCalories,
         )
     }
 }

@@ -31,6 +31,9 @@ class User(
     @Column(name = "password_hash", nullable = false, length = 255)
     var passwordHash: String,
 
+    @Column(name = "avatar_url", length = 512)
+    var avatarUrl: String? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

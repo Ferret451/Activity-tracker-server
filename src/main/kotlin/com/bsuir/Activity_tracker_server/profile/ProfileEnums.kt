@@ -13,3 +13,11 @@ enum class ActivityLevel(val multiplier: Double) {
     VERY_HIGH(1.9),
 }
 
+enum class CalorieGoal(val deltaKcal: Int) {
+    WEIGHT_LOSS(-600),
+    SLOW_WEIGHT_LOSS(-300),
+    MAINTAIN(0),
+    WEIGHT_GAIN(300),
+    FAST_WEIGHT_GAIN(600),
+}
+

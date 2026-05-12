@@ -12,6 +12,7 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Optional
@@ -92,10 +93,10 @@ class NutritionServiceImportUsdaTest {
             name = "Old name",
             source = "manual",
             fdcId = 999L,
-            caloriesPer100g = 10.0,
-            proteinPer100g = 1.0,
-            fatPer100g = 2.0,
-            carbsPer100g = 3.0,
+            caloriesPer100g = bd("10.00"),
+            proteinPer100g = bd("1.00"),
+            fatPer100g = bd("2.00"),
+            carbsPer100g = bd("3.00"),
             note = null,
             createdAt = now,
             updatedAt = now,
@@ -145,5 +146,7 @@ class NutritionServiceImportUsdaTest {
         lastName = "User",
         passwordHash = "hash",
     )
+
+    private fun bd(value: String): BigDecimal = BigDecimal(value)
 }
 

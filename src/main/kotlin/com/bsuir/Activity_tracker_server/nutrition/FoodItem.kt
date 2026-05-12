@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -34,16 +35,16 @@ class FoodItem(
     var fdcId: Long? = null,
 
     @Column(name = "calories_per_100g", nullable = false)
-    var caloriesPer100g: Double,
+    var caloriesPer100g: BigDecimal,
 
     @Column(name = "protein_per_100g", nullable = false)
-    var proteinPer100g: Double,
+    var proteinPer100g: BigDecimal,
 
     @Column(name = "fat_per_100g", nullable = false)
-    var fatPer100g: Double,
+    var fatPer100g: BigDecimal,
 
     @Column(name = "carbs_per_100g", nullable = false)
-    var carbsPer100g: Double,
+    var carbsPer100g: BigDecimal,
 
     @Column(name = "note", length = 500)
     var note: String? = null,

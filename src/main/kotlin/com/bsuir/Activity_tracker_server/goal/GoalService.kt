@@ -6,6 +6,8 @@ import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -22,13 +24,16 @@ class GoalService(
         val user = userRepository.findByIdOrNull(userId)
             ?: throw UserNotFoundException(userId)
 
+        val initial = request.initialValue.toBd2()
+        val target = request.targetValue.toBd2()
+
         val goal = UserGoal(
             user = user,
             goalType = request.goalType,
             title = request.title.trim(),
-            initialValue = request.initialValue,
-            targetValue = request.targetValue,
-            currentValue = request.initialValue,
+            initialValue = initial,
+            targetValue = target,
+            currentValue = initial,
             startDate = request.startDate,
             targetDate = request.targetDate,
         )
@@ -55,18 +60,19 @@ class GoalService(
     @Transactional
     fun addProgress(userId: UUID, goalId: UUID, request: AddGoalProgressRequest): UserGoalResponse {
         val goal = findOwnedGoal(userId, goalId)
+        val value = request.value.toBd2()
 
         val entry = UserGoalProgress(
             goal = goal,
-            value = request.value,
+            value = value,
             note = request.note?.trim()?.takeIf(String::isNotBlank),
             recordedAt = OffsetDateTime.now(ZoneOffset.UTC),
         )
 
         userGoalProgressRepository.save(entry)
 
-        goal.currentValue = request.value
-        if (GoalProgressCalculator.isGoalCompleted(goal.initialValue, goal.targetValue, goal.currentValue)) {
+        goal.currentValue = value
+        if (GoalProgressCalculator.isGoalCompleted(goal.initialValue.toDouble(), goal.targetValue.toDouble(), goal.currentValue.toDouble())) {
             goal.status = GoalStatus.COMPLETED
         }
 
@@ -81,7 +87,7 @@ class GoalService(
             .map {
                 GoalProgressResponse(
                     id = it.id,
-                    value = it.value,
+                    value = it.value.toDouble(),
                     note = it.note,
                     recordedAt = requireNotNull(it.recordedAt),
                 )
@@ -97,15 +103,22 @@ class GoalService(
         goalType = goalType,
         status = status,
         title = title,
-        initialValue = initialValue,
-        targetValue = targetValue,
-        currentValue = currentValue,
-        progressPercent = GoalProgressCalculator.calculateProgressPercent(initialValue, targetValue, currentValue),
+        initialValue = initialValue.toDouble(),
+        targetValue = targetValue.toDouble(),
+        currentValue = currentValue.toDouble(),
+        progressPercent = GoalProgressCalculator.calculateProgressPercent(
+            initialValue.toDouble(),
+            targetValue.toDouble(),
+            currentValue.toDouble(),
+        ),
         startDate = startDate,
         targetDate = targetDate,
         createdAt = requireNotNull(createdAt),
         updatedAt = requireNotNull(updatedAt),
     )
+
+    private fun Double.toBd2(): BigDecimal =
+        BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP)
 }
 
 

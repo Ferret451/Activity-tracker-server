@@ -47,6 +47,13 @@ class UserProfile(
     @Column(name = "activity_level", nullable = false, length = 20)
     var activityLevel: ActivityLevel,
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "calorie_goal", nullable = false, length = 30)
+    var calorieGoal: CalorieGoal = CalorieGoal.MAINTAIN,
+
+    @Column(name = "daily_calorie_target_kcal")
+    var dailyCalorieTargetKcal: Int? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

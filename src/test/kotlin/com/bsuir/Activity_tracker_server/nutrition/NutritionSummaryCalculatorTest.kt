@@ -2,6 +2,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.util.UUID
 
 class NutritionSummaryCalculatorTest {
@@ -13,9 +14,9 @@ class NutritionSummaryCalculatorTest {
 
         val summary = NutritionSummaryCalculator.calculate(
             listOf(
-                NutritionSummaryItem(breakfastId, "Breakfast", 350.0, 20.0, 10.0, 45.0),
-                NutritionSummaryItem(breakfastId, "Breakfast", 150.0, 8.0, 4.0, 20.0),
-                NutritionSummaryItem(dinnerId, "Dinner", 700.0, 40.0, 22.0, 80.0),
+                NutritionSummaryItem(breakfastId, "Breakfast", bd("350.00"), bd("20.00"), bd("10.00"), bd("45.00")),
+                NutritionSummaryItem(breakfastId, "Breakfast", bd("150.00"), bd("8.00"), bd("4.00"), bd("20.00")),
+                NutritionSummaryItem(dinnerId, "Dinner", bd("700.00"), bd("40.00"), bd("22.00"), bd("80.00")),
             ),
         )
 
@@ -27,5 +28,7 @@ class NutritionSummaryCalculatorTest {
         assertEquals("Dinner", summary.byMealType.first().mealTypeName)
         assertEquals(700.0, summary.byMealType.first().totalCaloriesKcal)
     }
+
+    private fun bd(value: String): BigDecimal = BigDecimal(value)
 }
 

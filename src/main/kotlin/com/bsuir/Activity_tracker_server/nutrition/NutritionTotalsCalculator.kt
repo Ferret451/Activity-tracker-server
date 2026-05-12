@@ -1,27 +1,28 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
-import kotlin.math.round
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 data class NutritionTotals(
-    val caloriesKcal: Double,
-    val proteinG: Double,
-    val fatG: Double,
-    val carbsG: Double,
+    val caloriesKcal: BigDecimal,
+    val proteinG: BigDecimal,
+    val fatG: BigDecimal,
+    val carbsG: BigDecimal,
 )
 
 object NutritionTotalsCalculator {
-    fun calculate(foodItem: FoodItem, grams: Double): NutritionTotals {
-        require(grams > 0.0) { "Grams must be greater than zero" }
+    fun calculate(foodItem: FoodItem, grams: BigDecimal): NutritionTotals {
+        require(grams > BigDecimal.ZERO) { "Grams must be greater than zero" }
 
-        val factor = grams / 100.0
+        val factor = grams.divide(BigDecimal("100"), 6, RoundingMode.HALF_UP)
         return NutritionTotals(
-            caloriesKcal = roundToTwo(foodItem.caloriesPer100g * factor),
-            proteinG = roundToTwo(foodItem.proteinPer100g * factor),
-            fatG = roundToTwo(foodItem.fatPer100g * factor),
-            carbsG = roundToTwo(foodItem.carbsPer100g * factor),
+            caloriesKcal = roundToTwo(foodItem.caloriesPer100g.multiply(factor)),
+            proteinG = roundToTwo(foodItem.proteinPer100g.multiply(factor)),
+            fatG = roundToTwo(foodItem.fatPer100g.multiply(factor)),
+            carbsG = roundToTwo(foodItem.carbsPer100g.multiply(factor)),
         )
     }
 
-    private fun roundToTwo(value: Double): Double = round(value * 100) / 100
+    private fun roundToTwo(value: BigDecimal): BigDecimal = value.setScale(2, RoundingMode.HALF_UP)
 }
 

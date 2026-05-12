@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -39,13 +40,13 @@ class UserGoal(
     var title: String,
 
     @Column(name = "initial_value", nullable = false)
-    var initialValue: Double,
+    var initialValue: BigDecimal,
 
     @Column(name = "target_value", nullable = false)
-    var targetValue: Double,
+    var targetValue: BigDecimal,
 
     @Column(name = "current_value", nullable = false)
-    var currentValue: Double,
+    var currentValue: BigDecimal,
 
     @Column(name = "start_date", nullable = false)
     var startDate: LocalDate,

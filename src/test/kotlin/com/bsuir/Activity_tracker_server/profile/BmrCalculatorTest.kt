@@ -14,10 +14,16 @@ class BmrCalculatorTest {
             age = 30,
         )
 
-        val dailyCalories = BmrCalculator.calculateDailyCalories(bmr, ActivityLevel.MODERATE)
+        val baseDailyCalories = BmrCalculator.calculateBaseDailyCalories(bmr, ActivityLevel.MODERATE)
+        val goalAdjustedDailyCalories = BmrCalculator.calculateGoalAdjustedDailyCalories(
+            bmr = bmr,
+            activityLevel = ActivityLevel.MODERATE,
+            calorieGoal = CalorieGoal.MAINTAIN,
+        )
 
-        assertEquals(1853.36, bmr)
-        assertEquals(2872.71, dailyCalories)
+        assertEquals(1780.0, bmr)
+        assertEquals(2759.0, baseDailyCalories)
+        assertEquals(2759.0, goalAdjustedDailyCalories)
     }
 
     @Test
@@ -29,7 +35,25 @@ class BmrCalculatorTest {
             age = 28,
         )
 
-        assertEquals(1390.7, bmr)
+        assertEquals(1330.25, bmr)
+    }
+
+    @Test
+    fun `applies calorie goal delta to daily calories`() {
+        val bmr = BmrCalculator.calculateBmr(
+            sex = Sex.MALE,
+            weightKg = 80.0,
+            heightCm = 180,
+            age = 30,
+        )
+
+        val base = BmrCalculator.calculateBaseDailyCalories(bmr, ActivityLevel.SEDENTARY)
+        val loss = BmrCalculator.calculateGoalAdjustedDailyCalories(bmr, ActivityLevel.SEDENTARY, CalorieGoal.WEIGHT_LOSS)
+        val gain = BmrCalculator.calculateGoalAdjustedDailyCalories(bmr, ActivityLevel.SEDENTARY, CalorieGoal.FAST_WEIGHT_GAIN)
+
+        assertEquals(2136.0, base)
+        assertEquals(1536.0, loss)
+        assertEquals(2736.0, gain)
     }
 }
 
