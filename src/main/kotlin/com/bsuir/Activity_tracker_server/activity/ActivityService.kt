@@ -25,17 +25,13 @@ class ActivityService(
 ) {
 
     @Transactional
-    fun createType(userId: UUID, request: CreateActivityTypeRequest): ActivityTypeResponse {
-        val user = userRepository.findByIdOrNull(userId)
-            ?: throw UserNotFoundException(userId)
-
+    fun createType(request: CreateActivityTypeRequest): ActivityTypeResponse {
         val normalizedName = request.name.trim()
-        if (activityTypeRepository.existsByUser_IdAndNameIgnoreCase(userId, normalizedName)) {
+        if (activityTypeRepository.existsByNameIgnoreCaseAndMet(normalizedName, request.met)) {
             throw DuplicateActivityTypeException(normalizedName)
         }
 
         val activityType = ActivityType(
-            user = user,
             name = normalizedName,
             met = request.met,
         )
@@ -44,18 +40,16 @@ class ActivityService(
     }
 
     @Transactional(readOnly = true)
-    fun getTypes(userId: UUID): List<ActivityTypeResponse> =
-        activityTypeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
+    fun getTypes(): List<ActivityTypeResponse> =
+        activityTypeRepository.findAllByOrderByNameAsc()
             .map { it.toResponse() }
 
     @Transactional
-    fun updateType(userId: UUID, typeId: UUID, request: UpdateActivityTypeRequest): ActivityTypeResponse {
-        val type = findOwnedType(userId, typeId)
+    fun updateType(typeId: UUID, request: UpdateActivityTypeRequest): ActivityTypeResponse {
+        val type = findTypeById(typeId)
         val normalizedName = request.name.trim()
 
-        if (!type.name.equals(normalizedName, ignoreCase = true) &&
-            activityTypeRepository.existsByUser_IdAndNameIgnoreCase(userId, normalizedName)
-        ) {
+        if (activityTypeRepository.existsByNameIgnoreCaseAndMetAndIdNot(normalizedName, request.met, typeId)) {
             throw DuplicateActivityTypeException(normalizedName)
         }
 
@@ -66,9 +60,9 @@ class ActivityService(
     }
 
     @Transactional
-    fun deleteType(userId: UUID, typeId: UUID) {
-        val type = findOwnedType(userId, typeId)
-        if (activityRecordRepository.existsByActivityType_IdAndUser_Id(typeId, userId)) {
+    fun deleteType(typeId: UUID) {
+        val type = findTypeById(typeId)
+        if (activityRecordRepository.existsByActivityType_Id(typeId)) {
             throw ActivityTypeInUseException(typeId)
         }
 
@@ -81,7 +75,7 @@ class ActivityService(
             ?: throw UserNotFoundException(userId)
         val profile = userProfileRepository.findByIdOrNull(userId)
             ?: throw ProfileNotFoundException(userId)
-        val activityType = findOwnedType(userId, request.activityTypeId)
+        val activityType = findTypeById(request.activityTypeId)
 
         val burnedCalories = ActivityCaloriesCalculator.calculate(
             weightKg = profile.weightKg,
@@ -117,7 +111,7 @@ class ActivityService(
         val record = findOwnedRecord(userId, recordId)
         val profile = userProfileRepository.findByIdOrNull(userId)
             ?: throw ProfileNotFoundException(userId)
-        val activityType = findOwnedType(userId, request.activityTypeId)
+        val activityType = findTypeById(request.activityTypeId)
 
         record.activityType = activityType
         record.durationMinutes = request.durationMinutes
@@ -160,7 +154,7 @@ class ActivityService(
         validateDateRange(filter.from, filter.to)
 
         if (filter.activityTypeId != null) {
-            findOwnedType(userId, filter.activityTypeId)
+            findTypeById(filter.activityTypeId)
         }
 
         val fromDateTime = filter.from?.atStartOfDay()?.atOffset(ZoneOffset.UTC)
@@ -180,8 +174,8 @@ class ActivityService(
         }
     }
 
-    private fun findOwnedType(userId: UUID, typeId: UUID): ActivityType =
-        activityTypeRepository.findByIdAndUser_Id(typeId, userId)
+    private fun findTypeById(typeId: UUID): ActivityType =
+        activityTypeRepository.findByIdOrNull(typeId)
             ?: throw ActivityTypeNotFoundException(typeId)
 
     private fun findOwnedRecord(userId: UUID, recordId: UUID): ActivityRecord =
@@ -192,7 +186,6 @@ class ActivityService(
         id = id,
         name = name,
         met = met,
-        createdAt = requireNotNull(createdAt),
         updatedAt = requireNotNull(updatedAt),
     )
 
@@ -208,4 +201,3 @@ class ActivityService(
         updatedAt = requireNotNull(updatedAt),
     )
 }
-

@@ -9,15 +9,20 @@ import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemNotFoundExc
 import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeInUseException
 import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeNotFoundException
 import com.bsuir.Activity_tracker_server.nutrition.exception.NutritionRecordNotFoundException
+import com.bsuir.Activity_tracker_server.profile.ProfileService
 import com.bsuir.Activity_tracker_server.user.UserRepository
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
+import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -28,34 +33,32 @@ class NutritionService(
     private val foodItemRepository: FoodItemRepository,
     private val nutritionRecordRepository: NutritionRecordRepository,
     private val foodDataClient: FoodDataClient,
+    private val profileService: ProfileService,
 ) {
 
     @Transactional
-    fun createMealType(userId: UUID, request: CreateMealTypeRequest): MealTypeResponse {
-        val user = userRepository.findByIdOrNull(userId)
-            ?: throw UserNotFoundException(userId)
-
+    fun createMealType(request: CreateMealTypeRequest): MealTypeResponse {
         val normalizedName = request.name.trim()
-        if (mealTypeRepository.existsByUser_IdAndNameIgnoreCase(userId, normalizedName)) {
+        if (mealTypeRepository.existsByNameIgnoreCase(normalizedName)) {
             throw DuplicateMealTypeException(normalizedName)
         }
 
-        val mealType = MealType(user = user, name = normalizedName)
+        val mealType = MealType(name = normalizedName)
         return mealTypeRepository.save(mealType).toResponse()
     }
 
     @Transactional(readOnly = true)
-    fun getMealTypes(userId: UUID): List<MealTypeResponse> =
-        mealTypeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
+    fun getMealTypes(): List<MealTypeResponse> =
+        mealTypeRepository.findAllByOrderByNameAsc()
             .map { it.toResponse() }
 
     @Transactional
-    fun updateMealType(userId: UUID, mealTypeId: UUID, request: UpdateMealTypeRequest): MealTypeResponse {
-        val mealType = findOwnedMealType(userId, mealTypeId)
+    fun updateMealType(mealTypeId: UUID, request: UpdateMealTypeRequest): MealTypeResponse {
+        val mealType = findMealTypeById(mealTypeId)
         val normalizedName = request.name.trim()
 
         if (!mealType.name.equals(normalizedName, ignoreCase = true) &&
-            mealTypeRepository.existsByUser_IdAndNameIgnoreCase(userId, normalizedName)
+            mealTypeRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, mealTypeId)
         ) {
             throw DuplicateMealTypeException(normalizedName)
         }
@@ -65,9 +68,9 @@ class NutritionService(
     }
 
     @Transactional
-    fun deleteMealType(userId: UUID, mealTypeId: UUID) {
-        val mealType = findOwnedMealType(userId, mealTypeId)
-        if (nutritionRecordRepository.existsByMealType_IdAndUser_Id(mealTypeId, userId)) {
+    fun deleteMealType(mealTypeId: UUID) {
+        val mealType = findMealTypeById(mealTypeId)
+        if (nutritionRecordRepository.existsByMealType_Id(mealTypeId)) {
             throw MealTypeInUseException(mealTypeId)
         }
 
@@ -184,7 +187,7 @@ class NutritionService(
     fun createRecord(userId: UUID, request: CreateNutritionRecordRequest): NutritionRecordResponse {
         val user = userRepository.findByIdOrNull(userId)
             ?: throw UserNotFoundException(userId)
-        val mealType = findOwnedMealType(userId, request.mealTypeId)
+        val mealType = findMealTypeById(request.mealTypeId)
         val foodItem = findOwnedFoodItem(userId, request.foodItemId)
 
         val grams = request.grams.toBd2()
@@ -219,7 +222,7 @@ class NutritionService(
     @Transactional
     fun updateRecord(userId: UUID, recordId: UUID, request: UpdateNutritionRecordRequest): NutritionRecordResponse {
         val record = findOwnedRecord(userId, recordId)
-        val mealType = findOwnedMealType(userId, request.mealTypeId)
+        val mealType = findMealTypeById(request.mealTypeId)
         val foodItem = findOwnedFoodItem(userId, request.foodItemId)
         val grams = request.grams.toBd2()
         val totals = NutritionTotalsCalculator.calculate(foodItem, grams)
@@ -288,11 +291,71 @@ class NutritionService(
         return NutritionSummaryCalculator.calculate(items)
     }
 
+    @Transactional(readOnly = true)
+    fun getDaily(userId: UUID, date: LocalDate?, zoneId: String): NutritionDailyResponse {
+        val zone = resolveZoneId(zoneId)
+        val day = date ?: LocalDate.now(zone)
+        val start = day.atStartOfDay(zone).toOffsetDateTime()
+        val endExclusive = day.plusDays(1).atStartOfDay(zone).toOffsetDateTime()
+
+        val spec =
+            Specification.where(NutritionRecordSpecifications.forUser(userId))
+                .and(NutritionRecordSpecifications.consumedFrom(start))
+                .and(NutritionRecordSpecifications.consumedUntil(endExclusive))
+
+        val records = nutritionRecordRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "consumedAt"))
+
+        val totalCalories = records.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalCaloriesKcal }
+        val totalProtein = records.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalProteinG }
+        val totalFat = records.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalFatG }
+        val totalCarbs = records.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalCarbsG }
+
+        val consumedKcal = roundToTwo(totalCalories.toDouble())
+        val consumedProtein = roundToTwo(totalProtein.toDouble())
+        val consumedFat = roundToTwo(totalFat.toDouble())
+        val consumedCarbs = roundToTwo(totalCarbs.toDouble())
+
+        val profile = profileService.getProfile(userId)
+        val (targetKcal, source) =
+            profile.dailyCalorieTargetKcal?.let { explicit ->
+                explicit.toDouble() to NutritionDailyCalorieTargetSource.EXPLICIT_DAILY_TARGET
+            } ?: run {
+                profileService.calculateBmr(userId).goalAdjustedDailyCalories to
+                    NutritionDailyCalorieTargetSource.BMR_GOAL_ADJUSTED
+            }
+
+        val remaining = roundToTwo(targetKcal - consumedKcal)
+
+        return NutritionDailyResponse(
+            date = day,
+            zone = zone.id,
+            totalCaloriesKcal = consumedKcal,
+            totalProteinG = consumedProtein,
+            totalFatG = consumedFat,
+            totalCarbsG = consumedCarbs,
+            targetCaloriesKcal = roundToTwo(targetKcal),
+            calorieTargetSource = source,
+            remainingCaloriesKcal = remaining,
+        )
+    }
+
+    private fun resolveZoneId(zoneId: String): ZoneId {
+        val trimmed = zoneId.trim()
+        if (trimmed.isEmpty()) {
+            return ZoneId.of("UTC")
+        }
+        return try {
+            ZoneId.of(trimmed)
+        } catch (e: DateTimeException) {
+            throw IllegalArgumentException("Invalid zone id: '$trimmed'", e)
+        }
+    }
+
     private fun getFilteredRecords(userId: UUID, filter: NutritionQueryFilter): List<NutritionRecord> {
         validateDateRange(filter.from, filter.to)
 
         if (filter.mealTypeId != null) {
-            findOwnedMealType(userId, filter.mealTypeId)
+            findMealTypeById(filter.mealTypeId)
         }
         if (filter.foodItemId != null) {
             findOwnedFoodItem(userId, filter.foodItemId)
@@ -301,13 +364,14 @@ class NutritionService(
         val fromDateTime = filter.from?.atStartOfDay()?.atOffset(ZoneOffset.UTC)
         val toDateTimeExclusive = filter.to?.plusDays(1)?.atStartOfDay()?.atOffset(ZoneOffset.UTC)
 
-        return nutritionRecordRepository.findFiltered(
-            userId = userId,
-            fromDateTime = fromDateTime,
-            toDateTimeExclusive = toDateTimeExclusive,
-            mealTypeId = filter.mealTypeId,
-            foodItemId = filter.foodItemId,
-        )
+        val spec =
+            Specification.where(NutritionRecordSpecifications.forUser(userId))
+                .and(NutritionRecordSpecifications.consumedFrom(fromDateTime))
+                .and(NutritionRecordSpecifications.consumedUntil(toDateTimeExclusive))
+                .and(NutritionRecordSpecifications.mealType(filter.mealTypeId))
+                .and(NutritionRecordSpecifications.foodItem(filter.foodItemId))
+
+        return nutritionRecordRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "consumedAt"))
     }
 
     private fun validateDateRange(from: LocalDate?, to: LocalDate?) {
@@ -316,8 +380,8 @@ class NutritionService(
         }
     }
 
-    private fun findOwnedMealType(userId: UUID, mealTypeId: UUID): MealType =
-        mealTypeRepository.findByIdAndUser_Id(mealTypeId, userId)
+    private fun findMealTypeById(mealTypeId: UUID): MealType =
+        mealTypeRepository.findByIdOrNull(mealTypeId)
             ?: throw MealTypeNotFoundException(mealTypeId)
 
     private fun findOwnedFoodItem(userId: UUID, foodItemId: UUID): FoodItem =
@@ -331,7 +395,6 @@ class NutritionService(
     private fun MealType.toResponse(): MealTypeResponse = MealTypeResponse(
         id = id,
         name = name,
-        createdAt = requireNotNull(createdAt),
         updatedAt = requireNotNull(updatedAt),
     )
 

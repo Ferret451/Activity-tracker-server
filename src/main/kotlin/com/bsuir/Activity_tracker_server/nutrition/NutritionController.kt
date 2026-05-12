@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.validation.annotation.Validated
@@ -28,29 +29,29 @@ class NutritionController(
 
     @PostMapping("/meal-types")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun createMealType(
-        @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: CreateMealTypeRequest,
-    ): MealTypeResponse = nutritionService.createMealType(extractUserId(jwt), request)
+    ): MealTypeResponse = nutritionService.createMealType(request)
 
     @GetMapping("/meal-types")
-    fun getMealTypes(@AuthenticationPrincipal jwt: Jwt): List<MealTypeResponse> =
-        nutritionService.getMealTypes(extractUserId(jwt))
+    fun getMealTypes(): List<MealTypeResponse> =
+        nutritionService.getMealTypes()
 
     @PutMapping("/meal-types/{mealTypeId}")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun updateMealType(
-        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable mealTypeId: UUID,
         @Valid @RequestBody request: UpdateMealTypeRequest,
-    ): MealTypeResponse = nutritionService.updateMealType(extractUserId(jwt), mealTypeId, request)
+    ): MealTypeResponse = nutritionService.updateMealType(mealTypeId, request)
 
     @DeleteMapping("/meal-types/{mealTypeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun deleteMealType(
-        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable mealTypeId: UUID,
     ) {
-        nutritionService.deleteMealType(extractUserId(jwt), mealTypeId)
+        nutritionService.deleteMealType(mealTypeId)
     }
 
     @PostMapping("/food-items")
@@ -167,6 +168,18 @@ class NutritionController(
                 mealTypeId = mealTypeId,
                 foodItemId = foodItemId,
             ),
+        )
+
+    @GetMapping("/daily")
+    fun getDaily(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestParam(required = false) date: LocalDate?,
+        @RequestParam(required = false) zone: String?,
+    ): NutritionDailyResponse =
+        nutritionService.getDaily(
+            userId = extractUserId(jwt),
+            date = date,
+            zoneId = zone.orEmpty(),
         )
 
     private fun extractUserId(jwt: Jwt): UUID = UUID.fromString(jwt.subject)

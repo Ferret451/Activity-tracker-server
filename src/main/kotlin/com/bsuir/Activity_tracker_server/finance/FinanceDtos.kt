@@ -128,3 +128,5 @@ data class FinancePeriodReportResponse(
     val incomeRecords: List<FinanceRecordResponse>,
     val expenseRecords: List<FinanceRecordResponse>,
 )
+
+typealias UpdateFinanceCategoryBranchRequest = CreateFinanceCategoryBranchRequest

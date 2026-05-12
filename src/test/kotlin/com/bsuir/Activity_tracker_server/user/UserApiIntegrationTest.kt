@@ -15,7 +15,7 @@ class UserApiIntegrationTest : ApiIntegrationTest() {
 
     @Test
     fun `users CRUD works`() {
-        val accessToken = registerUser("admin").accessToken
+        val accessToken = registerAdminUser("admin").accessToken
 
         val createdId = mockMvc.perform(
             post("/api/users")
@@ -71,7 +71,7 @@ class UserApiIntegrationTest : ApiIntegrationTest() {
 
     @Test
     fun `users validation returns 400`() {
-        val accessToken = registerUser("val").accessToken
+        val accessToken = registerAdminUser("val").accessToken
 
         mockMvc.perform(
             post("/api/users")

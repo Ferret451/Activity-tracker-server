@@ -23,4 +23,6 @@ interface FinanceRecordRepository :
     ): FinanceRecord?
 
     fun countByAccountId(accountId: UUID): Long
+
+    fun countByCategory_Id(categoryId: UUID): Long
 }

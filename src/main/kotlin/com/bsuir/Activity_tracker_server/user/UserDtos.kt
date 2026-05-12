@@ -27,6 +27,8 @@ data class CreateUserRequest(
     @field:NotBlank
     @field:Size(min = 8, max = 100)
     val password: String,
+
+    val role: UserRole? = null,
 )
 
 data class UpdateUserRequest(
@@ -46,6 +48,8 @@ data class UpdateUserRequest(
     @field:NotBlank
     @field:Size(max = 100)
     val lastName: String,
+
+    val role: UserRole? = null,
 )
 
 data class UserResponse(
@@ -54,6 +58,7 @@ data class UserResponse(
     val username: String,
     val firstName: String,
     val lastName: String,
+    val role: UserRole,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
 )
@@ -64,6 +69,11 @@ fun User.toResponse(): UserResponse = UserResponse(
     username = username,
     firstName = firstName,
     lastName = lastName,
+    role = role,
     createdAt = requireNotNull(createdAt),
     updatedAt = requireNotNull(updatedAt),
+)
+
+data class UpdateUserRoleRequest(
+    val role: UserRole,
 )

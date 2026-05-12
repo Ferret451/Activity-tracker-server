@@ -14,3 +14,12 @@ class DuplicateActivityTypeException(name: String) :
 class ActivityTypeInUseException(typeId: UUID) :
     RuntimeException("Activity type '$typeId' is used by existing records")
 
+class WorkoutSessionNotFoundException(sessionId: UUID) :
+    RuntimeException("Workout session with id '$sessionId' was not found")
+
+class ActiveWorkoutAlreadyExistsException :
+    RuntimeException("User already has an active workout session")
+
+class InvalidWorkoutSessionStateException(message: String) :
+    RuntimeException(message)
+

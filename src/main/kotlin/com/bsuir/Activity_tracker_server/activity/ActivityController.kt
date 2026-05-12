@@ -2,6 +2,7 @@ package com.bsuir.Activity_tracker_server.activity
 
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -25,29 +26,29 @@ class ActivityController(
 
     @PostMapping("/types")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun createType(
-        @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: CreateActivityTypeRequest,
-    ): ActivityTypeResponse = activityService.createType(extractUserId(jwt), request)
+    ): ActivityTypeResponse = activityService.createType(request)
 
     @GetMapping("/types")
-    fun getTypes(@AuthenticationPrincipal jwt: Jwt): List<ActivityTypeResponse> =
-        activityService.getTypes(extractUserId(jwt))
+    fun getTypes(): List<ActivityTypeResponse> =
+        activityService.getTypes()
 
     @PutMapping("/types/{typeId}")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun updateType(
-        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable typeId: UUID,
         @Valid @RequestBody request: UpdateActivityTypeRequest,
-    ): ActivityTypeResponse = activityService.updateType(extractUserId(jwt), typeId, request)
+    ): ActivityTypeResponse = activityService.updateType(typeId, request)
 
     @DeleteMapping("/types/{typeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     fun deleteType(
-        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable typeId: UUID,
     ) {
-        activityService.deleteType(extractUserId(jwt), typeId)
+        activityService.deleteType(typeId)
     }
 
     @PostMapping("/records")
@@ -113,4 +114,3 @@ class ActivityController(
 
     private fun extractUserId(jwt: Jwt): UUID = UUID.fromString(jwt.subject)
 }
-

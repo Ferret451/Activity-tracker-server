@@ -34,6 +34,7 @@ class UserService(
             firstName = request.firstName.trim(),
             lastName = request.lastName.trim(),
             passwordHash = requireNotNull(passwordEncoder.encode(rawPassword)),
+            role = request.role ?: UserRole.USER,
         )
 
         return userRepository.save(user).toResponse()
@@ -51,6 +52,7 @@ class UserService(
         user.username = request.username.trim()
         user.firstName = request.firstName.trim()
         user.lastName = request.lastName.trim()
+        request.role?.let { user.role = it }
 
         return userRepository.save(user).toResponse()
     }
@@ -62,6 +64,13 @@ class UserService(
         }
 
         userRepository.deleteById(id)
+    }
+
+    @Transactional
+    fun updateRole(id: UUID, request: UpdateUserRoleRequest): UserResponse {
+        val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException(id)
+        user.role = request.role
+        return userRepository.save(user).toResponse()
     }
 
     private fun ensureUniqueEmail(email: String, id: UUID? = null) {

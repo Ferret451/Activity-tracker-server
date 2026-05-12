@@ -22,7 +22,6 @@ data class UpdateMealTypeRequest(
 data class MealTypeResponse(
     val id: UUID,
     val name: String,
-    val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
 )
 
@@ -164,5 +163,22 @@ data class NutritionQueryFilter(
     val to: LocalDate?,
     val mealTypeId: UUID?,
     val foodItemId: UUID?,
+)
+
+enum class NutritionDailyCalorieTargetSource {
+    EXPLICIT_DAILY_TARGET,
+    BMR_GOAL_ADJUSTED,
+}
+
+data class NutritionDailyResponse(
+    val date: LocalDate,
+    val zone: String,
+    val totalCaloriesKcal: Double,
+    val totalProteinG: Double,
+    val totalFatG: Double,
+    val totalCarbsG: Double,
+    val targetCaloriesKcal: Double,
+    val calorieTargetSource: NutritionDailyCalorieTargetSource,
+    val remainingCaloriesKcal: Double,
 )
 

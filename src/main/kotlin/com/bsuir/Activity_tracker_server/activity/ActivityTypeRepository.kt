@@ -4,8 +4,9 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
 interface ActivityTypeRepository : JpaRepository<ActivityType, UUID> {
-    fun findAllByUser_IdOrderByCreatedAtDesc(userId: UUID): List<ActivityType>
-    fun findByIdAndUser_Id(id: UUID, userId: UUID): ActivityType?
-    fun existsByUser_IdAndNameIgnoreCase(userId: UUID, name: String): Boolean
-}
+    fun findAllByOrderByNameAsc(): List<ActivityType>
 
+    fun existsByNameIgnoreCaseAndMet(name: String, met: Double): Boolean
+
+    fun existsByNameIgnoreCaseAndMetAndIdNot(name: String, met: Double, id: UUID): Boolean
+}

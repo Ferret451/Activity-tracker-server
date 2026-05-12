@@ -25,7 +25,8 @@ class ProfileApiIntegrationTest : ApiIntegrationTest() {
                       "heightCm": 180,
                       "age": 25,
                       "sex": "MALE",
-                      "activityLevel": "MODERATE"
+                      "activityLevel": "MODERATE",
+                      "calorieGoal": "MAINTAIN"
                     }
                     """.trimIndent(),
                 ),
@@ -41,7 +42,8 @@ class ProfileApiIntegrationTest : ApiIntegrationTest() {
         mockMvc.perform(get("/api/me/bmr").withBearer(accessToken))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.bmr").isNumber)
-            .andExpect(jsonPath("$.dailyCalories").isNumber)
+            .andExpect(jsonPath("$.baseDailyCalories").isNumber)
+            .andExpect(jsonPath("$.goalAdjustedDailyCalories").isNumber)
     }
 
     @Test
@@ -59,7 +61,8 @@ class ProfileApiIntegrationTest : ApiIntegrationTest() {
                       "heightCm": 10,
                       "age": 5,
                       "sex": "MALE",
-                      "activityLevel": "LOW"
+                      "activityLevel": "LOW",
+                      "calorieGoal": "MAINTAIN"
                     }
                     """.trimIndent(),
                 ),

@@ -2,6 +2,8 @@ package com.bsuir.Activity_tracker_server.user
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
@@ -33,6 +35,10 @@ class User(
 
     @Column(name = "avatar_url", length = 512)
     var avatarUrl: String? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    var role: UserRole = UserRole.USER,
 
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,

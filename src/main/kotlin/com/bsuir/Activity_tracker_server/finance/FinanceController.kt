@@ -83,6 +83,40 @@ class FinanceController(
     fun listExpenseCategories(@AuthenticationPrincipal jwt: Jwt): List<FinanceCategoryResponse> =
         financeService.getCategoriesForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE)
 
+    @PutMapping("/income/categories/{categoryId}")
+    fun updateIncomeCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable categoryId: UUID,
+        @Valid @RequestBody request: UpdateFinanceCategoryBranchRequest,
+    ): FinanceCategoryResponse =
+        financeService.updateCategoryForBranch(extractUserId(jwt), FinanceOperationType.INCOME, categoryId, request)
+
+    @DeleteMapping("/income/categories/{categoryId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteIncomeCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable categoryId: UUID,
+    ) {
+        financeService.deleteCategoryForBranch(extractUserId(jwt), FinanceOperationType.INCOME, categoryId)
+    }
+
+    @PutMapping("/expense/categories/{categoryId}")
+    fun updateExpenseCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable categoryId: UUID,
+        @Valid @RequestBody request: UpdateFinanceCategoryBranchRequest,
+    ): FinanceCategoryResponse =
+        financeService.updateCategoryForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, categoryId, request)
+
+    @DeleteMapping("/expense/categories/{categoryId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteExpenseCategory(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable categoryId: UUID,
+    ) {
+        financeService.deleteCategoryForBranch(extractUserId(jwt), FinanceOperationType.EXPENSE, categoryId)
+    }
+
     @PostMapping("/income/records")
     @ResponseStatus(HttpStatus.CREATED)
     fun createIncomeRecord(

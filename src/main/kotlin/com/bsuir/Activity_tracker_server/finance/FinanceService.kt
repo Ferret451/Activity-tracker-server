@@ -4,6 +4,7 @@ import com.bsuir.Activity_tracker_server.finance.exception.DuplicateFinanceCateg
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountInUseException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryBranchMismatchException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryInUseException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordBranchMismatchException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
@@ -291,6 +292,41 @@ class FinanceService(
             incomeRecords = incomeRecords,
             expenseRecords = expenseRecords,
         )
+    }
+
+    @Transactional
+    fun updateCategoryForBranch(
+        userId: UUID,
+        branch: FinanceOperationType,
+        categoryId: UUID,
+        request: UpdateFinanceCategoryBranchRequest,
+    ): FinanceCategoryResponse {
+        val category = findOwnedCategory(userId, categoryId)
+        requireCategoryMatchesBranch(category, branch)
+        val normalizedName = request.name.trim()
+        if (!category.name.equals(normalizedName, ignoreCase = true) &&
+            categoryRepository.existsByUser_IdAndNameIgnoreCaseAndOperationType(
+                userId = userId,
+                name = normalizedName,
+                operationType = branch,
+            )
+        ) {
+            throw DuplicateFinanceCategoryException(normalizedName)
+        }
+        category.name = normalizedName
+        category.iconId = request.iconId
+        category.colorId = request.colorId
+        return categoryRepository.save(category).toCategoryResponse()
+    }
+
+    @Transactional
+    fun deleteCategoryForBranch(userId: UUID, branch: FinanceOperationType, categoryId: UUID) {
+        val category = findOwnedCategory(userId, categoryId)
+        requireCategoryMatchesBranch(category, branch)
+        if (recordRepository.countByCategory_Id(categoryId) > 0L) {
+            throw FinanceCategoryInUseException(categoryId)
+        }
+        categoryRepository.delete(category)
     }
 
     private fun persistBalanceContribution(accountId: UUID, delta: BigDecimal) {

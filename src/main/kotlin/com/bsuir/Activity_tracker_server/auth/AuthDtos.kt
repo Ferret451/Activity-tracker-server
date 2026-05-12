@@ -45,6 +45,16 @@ data class RefreshTokenRequest(
     val refreshToken: String,
 )
 
+data class ChangeOwnPasswordRequest(
+    @field:NotBlank
+    @field:Size(min = 8, max = 100)
+    val currentPassword: String,
+
+    @field:NotBlank
+    @field:Size(min = 8, max = 100)
+    val newPassword: String,
+)
+
 data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,

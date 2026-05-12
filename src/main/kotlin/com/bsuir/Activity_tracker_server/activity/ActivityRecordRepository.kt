@@ -7,5 +7,7 @@ interface ActivityRecordRepository : JpaRepository<ActivityRecord, UUID> {
     fun findByIdAndUser_Id(id: UUID, userId: UUID): ActivityRecord?
     fun findAllByUser_IdOrderByOccurredAtDesc(userId: UUID): List<ActivityRecord>
     fun existsByActivityType_IdAndUser_Id(activityTypeId: UUID, userId: UUID): Boolean
+
+    fun existsByActivityType_Id(activityTypeId: UUID): Boolean
 }
 

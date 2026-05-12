@@ -29,3 +29,5 @@ class FinanceCategoryBranchMismatchException(expected: FinanceOperationType) :
 class FinanceRecordBranchMismatchException :
     RuntimeException("Finance record belongs to another operation branch")
 
+class FinanceCategoryInUseException(categoryId: UUID) :
+    RuntimeException("Finance category '$categoryId' cannot be deleted because it has linked records")

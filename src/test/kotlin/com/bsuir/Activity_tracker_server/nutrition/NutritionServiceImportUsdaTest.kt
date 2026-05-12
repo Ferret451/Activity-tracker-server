@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
+import com.bsuir.Activity_tracker_server.profile.ProfileService
 import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,6 +28,7 @@ class NutritionServiceImportUsdaTest {
         val foodItemRepository = mock(FoodItemRepository::class.java)
         val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
+        val profileService = mock(ProfileService::class.java)
 
         val userId = UUID.randomUUID()
         val user = testUser(userId)
@@ -60,6 +62,7 @@ class NutritionServiceImportUsdaTest {
             foodItemRepository = foodItemRepository,
             nutritionRecordRepository = nutritionRecordRepository,
             foodDataClient = foodDataClient,
+            profileService = profileService,
         )
 
         val result = service.importFoodItemFromUsda(userId, 12345L)
@@ -81,6 +84,7 @@ class NutritionServiceImportUsdaTest {
         val foodItemRepository = mock(FoodItemRepository::class.java)
         val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
+        val profileService = mock(ProfileService::class.java)
 
         val userId = UUID.randomUUID()
         val user = testUser(userId)
@@ -122,6 +126,7 @@ class NutritionServiceImportUsdaTest {
             foodItemRepository = foodItemRepository,
             nutritionRecordRepository = nutritionRecordRepository,
             foodDataClient = foodDataClient,
+            profileService = profileService,
         )
 
         val result = service.importFoodItemFromUsda(userId, 54321L)

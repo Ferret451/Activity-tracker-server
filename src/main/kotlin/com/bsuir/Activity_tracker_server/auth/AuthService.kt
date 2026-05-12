@@ -1,12 +1,15 @@
 package com.bsuir.Activity_tracker_server.auth
 
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
+import com.bsuir.Activity_tracker_server.auth.exception.InvalidCurrentPasswordException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
 import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
 import com.bsuir.Activity_tracker_server.user.toResponse
 import com.bsuir.Activity_tracker_server.user.exception.DuplicateUserFieldException
+import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -102,6 +105,17 @@ class AuthService(
             token.revokedAt = now
             refreshTokenRepository.save(token)
         }
+    }
+
+    @Transactional
+    fun changeOwnPassword(userId: UUID, request: ChangeOwnPasswordRequest) {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw UserNotFoundException(userId)
+        if (!passwordEncoder.matches(request.currentPassword, user.passwordHash)) {
+            throw InvalidCurrentPasswordException()
+        }
+        user.passwordHash = passwordEncoder.encode(request.newPassword)!!
+        userRepository.save(user)
     }
 
     private fun issueTokens(user: User): AuthResponse {

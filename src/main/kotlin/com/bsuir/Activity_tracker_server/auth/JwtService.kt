@@ -1,6 +1,7 @@
 package com.bsuir.Activity_tracker_server.auth
 
 import com.bsuir.Activity_tracker_server.user.User
+import com.bsuir.Activity_tracker_server.user.UserRole
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
@@ -25,7 +26,7 @@ class JwtService(
             .expiresAt(expiresAt.toInstant())
             .claim("email", user.email)
             .claim("username", user.username)
-            .claim("scope", "USER")
+            .claim("scope", if (user.role == UserRole.ADMIN) "ADMIN" else "USER")
             .build()
 
         val jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build()

@@ -16,7 +16,6 @@ class ActivityApiIntegrationTest : ApiIntegrationTest() {
     fun `activity types and records flow works with summary`() {
         val accessToken = registerUser("activity").accessToken
 
-        // Creating activity records depends on having a profile (weight/height/etc.) for calorie calculations.
         mockMvc.perform(
             put("/api/me/profile")
                 .withBearer(accessToken)
@@ -28,29 +27,21 @@ class ActivityApiIntegrationTest : ApiIntegrationTest() {
                       "heightCm": 180,
                       "age": 25,
                       "sex": "MALE",
-                      "activityLevel": "MODERATE"
+                      "activityLevel": "MODERATE",
+                      "calorieGoal": "MAINTAIN"
                     }
                     """.trimIndent(),
                 ),
         )
             .andExpect(status().isOk)
 
-        val typeId = mockMvc.perform(
-            post("/api/me/activity/types")
-                .withBearer(accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name":"Running","met":8.0}"""),
-        )
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.id").isNotEmpty)
+        val typeId = mockMvc.perform(get("/api/me/activity/types").withBearer(accessToken))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").isNotEmpty)
             .andReturn()
             .response
             .contentAsString
-            .let { objectMapper.readTree(it).path("id").asText() }
-
-        mockMvc.perform(get("/api/me/activity/types").withBearer(accessToken))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").value(typeId))
+            .let { objectMapper.readTree(it).path(0).path("id").asText() }
 
         val recordId = mockMvc.perform(
             post("/api/me/activity/records")
@@ -75,20 +66,31 @@ class ActivityApiIntegrationTest : ApiIntegrationTest() {
             .andExpect(jsonPath("$.totalDurationMinutes").value(30))
             .andExpect(jsonPath("$.byType[0].activityTypeId").value(typeId))
 
-        mockMvc.perform(
-            put("/api/me/activity/types/$typeId")
-                .withBearer(accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name":"Jogging","met":7.0}"""),
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("Jogging"))
-
         mockMvc.perform(delete("/api/me/activity/records/$recordId").withBearer(accessToken))
             .andExpect(status().isNoContent)
 
-        mockMvc.perform(delete("/api/me/activity/types/$typeId").withBearer(accessToken))
+        val adminToken = registerAdminUser("actypeadmin").accessToken
+        val customTypeId = mockMvc.perform(
+            post("/api/me/activity/types")
+                .withBearer(adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"TestRun-${System.nanoTime()}","met":8.0}"""),
+        )
+            .andExpect(status().isCreated)
+            .andReturn()
+            .response
+            .contentAsString
+            .let { objectMapper.readTree(it).path("id").asText() }
+
+        mockMvc.perform(
+            put("/api/me/activity/types/$customTypeId")
+                .withBearer(adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"TestRunUpd-${System.nanoTime()}","met":7.5}"""),
+        )
+            .andExpect(status().isOk)
+
+        mockMvc.perform(delete("/api/me/activity/types/$customTypeId").withBearer(adminToken))
             .andExpect(status().isNoContent)
     }
 }
-

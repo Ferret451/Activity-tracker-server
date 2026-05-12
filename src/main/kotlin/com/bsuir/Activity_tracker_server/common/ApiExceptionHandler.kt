@@ -1,15 +1,21 @@
 package com.bsuir.Activity_tracker_server.common
 
+import com.bsuir.Activity_tracker_server.activity.exception.ActiveWorkoutAlreadyExistsException
+import com.bsuir.Activity_tracker_server.activity.exception.InvalidWorkoutSessionStateException
+import com.bsuir.Activity_tracker_server.activity.exception.WorkoutSessionNotFoundException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityRecordNotFoundException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeInUseException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeNotFoundException
 import com.bsuir.Activity_tracker_server.activity.exception.DuplicateActivityTypeException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidCredentialsException
+import com.bsuir.Activity_tracker_server.auth.exception.InvalidCurrentPasswordException
 import com.bsuir.Activity_tracker_server.auth.exception.InvalidRefreshTokenException
+import com.bsuir.Activity_tracker_server.bodymetrics.exception.WeightEntryNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.DuplicateFinanceCategoryException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountInUseException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceAccountNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryBranchMismatchException
+import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryInUseException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceCategoryNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordBranchMismatchException
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
@@ -29,6 +35,7 @@ import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -137,6 +144,10 @@ class ApiExceptionHandler {
     fun handleInvalidRefreshToken(exception: InvalidRefreshTokenException): ProblemDetail =
         buildProblemDetail(HttpStatus.UNAUTHORIZED, exception.message ?: "Invalid refresh token")
 
+    @ExceptionHandler(InvalidCurrentPasswordException::class)
+    fun handleInvalidCurrentPassword(exception: InvalidCurrentPasswordException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Current password is incorrect")
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(exception: MethodArgumentNotValidException): ProblemDetail {
         val errors = exception.bindingResult.fieldErrors
@@ -154,6 +165,30 @@ class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(exception: IllegalArgumentException): ProblemDetail =
         buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Invalid request")
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(exception: AccessDeniedException): ProblemDetail =
+        buildProblemDetail(HttpStatus.FORBIDDEN, exception.message ?: "Forbidden")
+
+    @ExceptionHandler(WorkoutSessionNotFoundException::class)
+    fun handleWorkoutSessionNotFound(exception: WorkoutSessionNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Workout session was not found")
+
+    @ExceptionHandler(ActiveWorkoutAlreadyExistsException::class)
+    fun handleActiveWorkoutExists(exception: ActiveWorkoutAlreadyExistsException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Active workout already exists")
+
+    @ExceptionHandler(InvalidWorkoutSessionStateException::class)
+    fun handleInvalidWorkoutState(exception: InvalidWorkoutSessionStateException): ProblemDetail =
+        buildProblemDetail(HttpStatus.BAD_REQUEST, exception.message ?: "Invalid workout session state")
+
+    @ExceptionHandler(WeightEntryNotFoundException::class)
+    fun handleWeightEntryNotFound(exception: WeightEntryNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Weight entry was not found")
+
+    @ExceptionHandler(FinanceCategoryInUseException::class)
+    fun handleFinanceCategoryInUse(exception: FinanceCategoryInUseException): ProblemDetail =
+        buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Finance category is in use")
 
     @ExceptionHandler(ExternalFoodApiException::class)
     fun handleExternalFoodApi(exception: ExternalFoodApiException): ProblemDetail {

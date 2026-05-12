@@ -30,7 +30,6 @@ data class ActivityTypeResponse(
     val id: UUID,
     val name: String,
     val met: Double,
-    val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
 )
 
