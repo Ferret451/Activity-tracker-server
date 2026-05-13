@@ -752,12 +752,22 @@
 | `source` | string | нет | max 30 |
 | `fdcId` | long | нет | внешний id USDA |
 | `note` | string | нет | max 500 |
+| `additionalNutrients` | массив **AdditionalNutrientRequest** | нет | до 100 элементов |
+
+**AdditionalNutrientRequest** (элементы `additionalNutrients`):
+
+| Поле | Тип | Обяз. | Ограничения |
+|------|-----|-------|-------------|
+| `number` | string | нет | max 16, код нутриента (например USDA), если известен |
+| `name` | string | да | не пустой, max 200 |
+| `unitName` | string | нет | max 32 |
+| `amountPer100g` | number | да | ≥ 0 |
 
 #### `POST /api/me/nutrition/food-items/import/usda/{fdcId}` — `200`, FoodItemResponse
 
 **Path:** `fdcId` — целое **> 0** (`@Positive`).
 
-Тело запроса не требуется.
+Тело запроса не требуется. Дополнительные нутриенты из ответа USDA (кроме ккал и БЖУ в четырёх полях продукта) сохраняются в `additionalNutrientsPer100g`.
 
 #### `GET /api/me/nutrition/food-items` — `200`, массив FoodItemResponse
 
@@ -769,7 +779,7 @@
 
 #### `DELETE /api/me/nutrition/food-items/{foodItemId}` — `204`
 
-**FoodItemResponse:** `id`, `name`, `caloriesPer100g`, `proteinPer100g`, `fatPer100g`, `carbsPer100g`, `source`, `fdcId`, `note`, `createdAt`, `updatedAt`.
+**FoodItemResponse:** `id`, `name`, `caloriesPer100g`, `proteinPer100g`, `fatPer100g`, `carbsPer100g`, `source`, `fdcId`, `note`, `createdAt`, `updatedAt`, `additionalNutrientsPer100g` (массив **AdditionalNutrientPer100gResponse**: `number`, `name`, `unitName`, `amountPer100g`).
 
 ### Записи питания (`records`)
 
@@ -799,7 +809,9 @@
 
 #### `DELETE /api/me/nutrition/records/{recordId}` — `204`
 
-**NutritionRecordResponse:** `id`, `mealType`, `foodItem`, `grams`, `totalCaloriesKcal`, `totalProteinG`, `totalFatG`, `totalCarbsG`, `note`, `consumedAt`, `createdAt`, `updatedAt`.
+При создании и изменении записи дополнительные нутриенты **пересчитываются** из продукта и граммовки (снимок на момент сохранения).
+
+**NutritionRecordResponse:** `id`, `mealType`, `foodItem`, `grams`, `totalCaloriesKcal`, `totalProteinG`, `totalFatG`, `totalCarbsG`, `note`, `consumedAt`, `createdAt`, `updatedAt`, `additionalNutrients` (массив **AdditionalNutrientPortionResponse**: `number`, `name`, `unitName`, `totalAmount`).
 
 ### `GET /api/me/nutrition/history` — `200`
 
@@ -814,11 +826,27 @@
 | `totalProteinG` | number |
 | `totalFatG` | number |
 | `totalCarbsG` | number |
+| `additionalNutrientsTotals` | массив **AdditionalNutrientTotalResponse** |
 | `records` | массив NutritionRecordResponse |
+
+**AdditionalNutrientTotalResponse:** `number` (string \| null), `name`, `unitName` (string \| null), `totalAmount` (number) — сумма по дню; строки с одинаковым ключом `(COALESCE(number,''), имя в нижнем регистре)` объединяются.
 
 ### `GET /api/me/nutrition/summary` — `200`
 
 **Query (необязательны):** как у списка записей: `from`, `to`, `mealTypeId`, `foodItemId`. См. раздел записей про **UTC-границы** для `from`/`to`.
+
+**Ответ — NutritionSummaryResponse**
+
+| Поле | Тип |
+|------|-----|
+| `totalCaloriesKcal` | number |
+| `totalProteinG` | number |
+| `totalFatG` | number |
+| `totalCarbsG` | number |
+| `additionalNutrientsTotals` | массив **AdditionalNutrientTotalResponse** |
+| `byMealType` | массив NutritionMealTypeSummaryResponse |
+
+**NutritionMealTypeSummaryResponse:** `mealTypeId`, `mealTypeName`, `totalCaloriesKcal`, `totalProteinG`, `totalFatG`, `totalCarbsG`, `additionalNutrientsTotals` (массив **AdditionalNutrientTotalResponse**).
 
 ### `GET /api/me/nutrition/daily` — `200`, **NutritionDailyResponse**
 
@@ -850,20 +878,9 @@
 | `targetCaloriesKcal` | number |
 | `calorieTargetSource` | string | `EXPLICIT_DAILY_TARGET` \| `BMR_GOAL_ADJUSTED` |
 | `remainingCaloriesKcal` | number |
+| `additionalNutrientsTotals` | массив **AdditionalNutrientTotalResponse** |
 
 Зеркало: **`GET /api/users/{userId}/nutrition/daily`** — те же query-параметры, доступ как у остального дерева `.../nutrition/...`.
-
-**Ответ — NutritionSummaryResponse**
-
-| Поле | Тип |
-|------|-----|
-| `totalCaloriesKcal` | number |
-| `totalProteinG` | number |
-| `totalFatG` | number |
-| `totalCarbsG` | number |
-| `byMealType` | массив NutritionMealTypeSummaryResponse |
-
-**NutritionMealTypeSummaryResponse:** `mealTypeId`, `mealTypeName`, `totalCaloriesKcal`, `totalProteinG`, `totalFatG`, `totalCarbsG`.
 
 ---
 
@@ -921,6 +938,8 @@
 ## `/api/foods` — поиск и сведения о продуктах (USDA FDC, прокси)
 
 **Требуется JWT.** Ответы зависят от внешнего API; при ошибках возможны статусы из раздела [Коды ответов](#коды-ответов-и-типичные-ситуации) и поле `upstreamError`.
+
+Дополнительно: сервер **не возвращает** продукты, у которых не найден хотя бы один из макронутриентов **белки/жиры/углеводы** (поля `proteinG`, `fatG`, `carbsG`). В выдачу **поиска и списков** (`/search`, `/list`) также **не попадают** продукты без **положительной** калорийности на 100 г: если `caloriesKcal` **отсутствует** (`null`) **или** ≤ 0, позиция отфильтровывается, даже при полных БЖУ.
 
 ### `GET /api/foods/search` — `200`, FoodSearchResponse
 
@@ -997,7 +1016,16 @@
 
 **FoodDetailsResponse:** как summary плюс `ingredients`, `portions` (массив FoodPortionResponse).
 
-**FoodNutrientsResponse:** `caloriesKcal`, `proteinG`, `fatG`, `carbsG` (все nullable).
+**FoodNutrientsResponse:** `caloriesKcal`, `proteinG`, `fatG`, `carbsG` (все nullable) + `additionalNutrients` (массив).
+
+**FoodNutrientEntry (additionalNutrients[]):**
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `name` | string | Название нутриента |
+| `amount` | number | Количество (как отдаёт провайдер) |
+| `unitName` | string \| null | Единица измерения |
+| `number` | string \| null | Код нутриента (если доступен) |
 
 **FoodPortionResponse:** `amount`, `gramWeight`, `description` (nullable).
 

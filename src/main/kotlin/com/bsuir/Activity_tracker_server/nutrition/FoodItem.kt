@@ -1,15 +1,18 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
 import com.bsuir.Activity_tracker_server.user.User
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.hibernate.annotations.BatchSize
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -54,6 +57,10 @@ class FoodItem(
 
     @Column(name = "updated_at", nullable = false)
     var updatedAt: OffsetDateTime? = null,
+
+    @OneToMany(mappedBy = "foodItem", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @BatchSize(size = 50)
+    val additionalNutrients: MutableList<FoodItemNutrient> = mutableListOf(),
 ) {
     @PrePersist
     fun onCreate() {

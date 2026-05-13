@@ -1,7 +1,8 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
+import com.bsuir.Activity_tracker_server.food.FoodNutrientEntry
+import com.bsuir.Activity_tracker_server.food.UsdaNutrientsParser
 import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
-import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateFoodItemException
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateMealTypeException
 import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemInUseException
@@ -98,6 +99,7 @@ class NutritionService(
             carbsPer100g = request.carbsPer100g.toBd2(),
             note = request.note?.trim()?.takeIf(String::isNotBlank),
         )
+        foodItem.replaceAdditionalFromRequests(request.additionalNutrients)
 
         return foodItemRepository.save(foodItem).toResponse()
     }
@@ -110,7 +112,7 @@ class NutritionService(
             ?: throw UserNotFoundException(userId)
 
         val usdaFood = foodDataClient.getFoodById(fdcId)
-        val nutrients = extractUsdaNutrients(usdaFood.foodNutrients)
+        val parsed = UsdaNutrientsParser.extractNutrients(usdaFood.foodNutrients)
         val baseName = usdaFood.description?.trim()?.takeIf(String::isNotBlank)
             ?: "USDA Food $fdcId"
 
@@ -118,11 +120,12 @@ class NutritionService(
         if (existingFoodItem != null) {
             existingFoodItem.name = resolveImportedName(userId, baseName, fdcId, existingFoodItem.id)
             existingFoodItem.source = USDA_SOURCE
-            existingFoodItem.caloriesPer100g = nutrients.calories.toBd2()
-            existingFoodItem.proteinPer100g = nutrients.protein.toBd2()
-            existingFoodItem.fatPer100g = nutrients.fat.toBd2()
-            existingFoodItem.carbsPer100g = nutrients.carbs.toBd2()
+            existingFoodItem.caloriesPer100g = (parsed.caloriesKcal ?: 0.0).toBd2()
+            existingFoodItem.proteinPer100g = (parsed.proteinG ?: 0.0).toBd2()
+            existingFoodItem.fatPer100g = (parsed.fatG ?: 0.0).toBd2()
+            existingFoodItem.carbsPer100g = (parsed.carbsG ?: 0.0).toBd2()
             existingFoodItem.note = existingFoodItem.note ?: IMPORTED_NOTE
+            existingFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
             return foodItemRepository.save(existingFoodItem).toResponse()
         }
 
@@ -131,12 +134,13 @@ class NutritionService(
             name = resolveImportedName(userId, baseName, fdcId),
             source = USDA_SOURCE,
             fdcId = fdcId,
-            caloriesPer100g = nutrients.calories.toBd2(),
-            proteinPer100g = nutrients.protein.toBd2(),
-            fatPer100g = nutrients.fat.toBd2(),
-            carbsPer100g = nutrients.carbs.toBd2(),
+            caloriesPer100g = (parsed.caloriesKcal ?: 0.0).toBd2(),
+            proteinPer100g = (parsed.proteinG ?: 0.0).toBd2(),
+            fatPer100g = (parsed.fatG ?: 0.0).toBd2(),
+            carbsPer100g = (parsed.carbsG ?: 0.0).toBd2(),
             note = IMPORTED_NOTE,
         )
+        importedFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
 
         return foodItemRepository.save(importedFoodItem).toResponse()
     }
@@ -169,6 +173,7 @@ class NutritionService(
         foodItem.fatPer100g = request.fatPer100g.toBd2()
         foodItem.carbsPer100g = request.carbsPer100g.toBd2()
         foodItem.note = request.note?.trim()?.takeIf(String::isNotBlank)
+        foodItem.replaceAdditionalFromRequests(request.additionalNutrients)
 
         return foodItemRepository.save(foodItem).toResponse()
     }
@@ -191,20 +196,21 @@ class NutritionService(
         val foodItem = findOwnedFoodItem(userId, request.foodItemId)
 
         val grams = request.grams.toBd2()
-        val totals = NutritionTotalsCalculator.calculate(foodItem, grams)
+        val portionTotals = NutritionTotalsCalculator.calculatePortion(foodItem, grams)
 
         val record = NutritionRecord(
             user = user,
             mealType = mealType,
             foodItem = foodItem,
             grams = grams,
-            totalCaloriesKcal = totals.caloriesKcal,
-            totalProteinG = totals.proteinG,
-            totalFatG = totals.fatG,
-            totalCarbsG = totals.carbsG,
+            totalCaloriesKcal = portionTotals.caloriesKcal,
+            totalProteinG = portionTotals.proteinG,
+            totalFatG = portionTotals.fatG,
+            totalCarbsG = portionTotals.carbsG,
             note = request.note?.trim()?.takeIf(String::isNotBlank),
             consumedAt = request.consumedAt ?: OffsetDateTime.now(ZoneOffset.UTC),
         )
+        record.replaceAdditionalFromPortion(portionTotals.additionalNutrients)
 
         return nutritionRecordRepository.save(record).toResponse()
     }
@@ -225,17 +231,18 @@ class NutritionService(
         val mealType = findMealTypeById(request.mealTypeId)
         val foodItem = findOwnedFoodItem(userId, request.foodItemId)
         val grams = request.grams.toBd2()
-        val totals = NutritionTotalsCalculator.calculate(foodItem, grams)
+        val portionTotals = NutritionTotalsCalculator.calculatePortion(foodItem, grams)
 
         record.mealType = mealType
         record.foodItem = foodItem
         record.grams = grams
-        record.totalCaloriesKcal = totals.caloriesKcal
-        record.totalProteinG = totals.proteinG
-        record.totalFatG = totals.fatG
-        record.totalCarbsG = totals.carbsG
+        record.totalCaloriesKcal = portionTotals.caloriesKcal
+        record.totalProteinG = portionTotals.proteinG
+        record.totalFatG = portionTotals.fatG
+        record.totalCarbsG = portionTotals.carbsG
         record.note = request.note?.trim()?.takeIf(String::isNotBlank)
         record.consumedAt = request.consumedAt
+        record.replaceAdditionalFromPortion(portionTotals.additionalNutrients)
 
         return nutritionRecordRepository.save(record).toResponse()
     }
@@ -262,6 +269,9 @@ class NutritionService(
                 val totalProtein = dayRecords.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalProteinG }
                 val totalFat = dayRecords.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalFatG }
                 val totalCarbs = dayRecords.fold(BigDecimal.ZERO) { acc, it -> acc + it.totalCarbsG }
+                val additionalDayTotals = NutrientTotalsAggregator.mergeAdditionalNutrients(
+                    dayRecords.flatMap { it.additionalNutrients },
+                )
                 NutritionHistoryDayResponse(
                     date = date,
                     totalCaloriesKcal = roundToTwo(totalCalories.toDouble()),
@@ -269,6 +279,7 @@ class NutritionService(
                     totalFatG = roundToTwo(totalFat.toDouble()),
                     totalCarbsG = roundToTwo(totalCarbs.toDouble()),
                     records = dayRecords.map { it.toResponse() },
+                    additionalNutrientsTotals = additionalDayTotals,
                 )
             }
     }
@@ -288,7 +299,14 @@ class NutritionService(
             )
         }
 
-        return NutritionSummaryCalculator.calculate(items)
+        val macroSummary = NutritionSummaryCalculator.calculate(items)
+        val agg = NutrientTotalsAggregator.aggregateFromRecords(records)
+        return macroSummary.copy(
+            additionalNutrientsTotals = agg.overall,
+            byMealType = macroSummary.byMealType.map { m ->
+                m.copy(additionalNutrientsTotals = agg.byMealTypeId[m.mealTypeId].orEmpty())
+            },
+        )
     }
 
     @Transactional(readOnly = true)
@@ -314,6 +332,9 @@ class NutritionService(
         val consumedProtein = roundToTwo(totalProtein.toDouble())
         val consumedFat = roundToTwo(totalFat.toDouble())
         val consumedCarbs = roundToTwo(totalCarbs.toDouble())
+        val additionalDayTotals = NutrientTotalsAggregator.mergeAdditionalNutrients(
+            records.flatMap { it.additionalNutrients },
+        )
 
         val profile = profileService.getProfile(userId)
         val (targetKcal, source) =
@@ -336,6 +357,7 @@ class NutritionService(
             targetCaloriesKcal = roundToTwo(targetKcal),
             calorieTargetSource = source,
             remainingCaloriesKcal = remaining,
+            additionalNutrientsTotals = additionalDayTotals,
         )
     }
 
@@ -392,6 +414,51 @@ class NutritionService(
         nutritionRecordRepository.findByIdAndUser_Id(recordId, userId)
             ?: throw NutritionRecordNotFoundException(recordId)
 
+    private fun FoodItem.replaceAdditionalFromRequests(requests: List<AdditionalNutrientRequest>?) {
+        additionalNutrients.clear()
+        requests.orEmpty().forEach { req ->
+            additionalNutrients.add(
+                FoodItemNutrient(
+                    foodItem = this,
+                    nutrientNumber = req.number?.trim()?.takeIf { it.isNotEmpty() },
+                    name = req.name.trim().take(200),
+                    unitName = req.unitName?.trim()?.takeIf { it.isNotEmpty() },
+                    amountPer100g = req.amountPer100g.toBd2(),
+                )
+            )
+        }
+    }
+
+    private fun FoodItem.replaceAdditionalFromFoodEntries(entries: List<FoodNutrientEntry>) {
+        additionalNutrients.clear()
+        entries.forEach { e ->
+            additionalNutrients.add(
+                FoodItemNutrient(
+                    foodItem = this,
+                    nutrientNumber = e.number?.trim()?.takeIf { it.isNotEmpty() },
+                    name = e.name.trim().take(200),
+                    unitName = e.unitName?.trim()?.takeIf { it.isNotEmpty() },
+                    amountPer100g = roundDoubleToBd2(e.amount),
+                )
+            )
+        }
+    }
+
+    private fun NutritionRecord.replaceAdditionalFromPortion(totals: List<PortionNutrientTotal>) {
+        additionalNutrients.clear()
+        totals.forEach { p ->
+            additionalNutrients.add(
+                NutritionRecordNutrient(
+                    nutritionRecord = this,
+                    nutrientNumber = p.nutrientNumber,
+                    name = p.name.trim().take(200),
+                    unitName = p.unitName?.trim()?.takeIf { it.isNotEmpty() },
+                    totalAmount = p.totalAmount,
+                )
+            )
+        }
+    }
+
     private fun MealType.toResponse(): MealTypeResponse = MealTypeResponse(
         id = id,
         name = name,
@@ -410,6 +477,14 @@ class NutritionService(
         note = note,
         createdAt = requireNotNull(createdAt),
         updatedAt = requireNotNull(updatedAt),
+        additionalNutrientsPer100g = additionalNutrients.map {
+            AdditionalNutrientPer100gResponse(
+                number = it.nutrientNumber,
+                name = it.name,
+                unitName = it.unitName,
+                amountPer100g = it.amountPer100g.toDouble(),
+            )
+        }.sortedWith(compareBy({ it.name.lowercase() }, { it.number.orEmpty() })),
     )
 
     private fun NutritionRecord.toResponse(): NutritionRecordResponse = NutritionRecordResponse(
@@ -425,6 +500,14 @@ class NutritionService(
         consumedAt = consumedAt,
         createdAt = requireNotNull(createdAt),
         updatedAt = requireNotNull(updatedAt),
+        additionalNutrients = additionalNutrients.map {
+            AdditionalNutrientPortionResponse(
+                number = it.nutrientNumber,
+                name = it.name,
+                unitName = it.unitName,
+                totalAmount = it.totalAmount.toDouble(),
+            )
+        }.sortedWith(compareBy({ it.name.lowercase() }, { it.number.orEmpty() })),
     )
 
     private fun roundToTwo(value: Double): Double = kotlin.math.round(value * 100) / 100
@@ -432,49 +515,8 @@ class NutritionService(
     private fun Double.toBd2(): BigDecimal =
         BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP)
 
-    private fun extractUsdaNutrients(nutrients: List<UsdaFoodNutrient>): UsdaNutrients {
-        val normalized = nutrients.mapNotNull(::toNutrientValue)
-        return UsdaNutrients(
-            calories = roundToTwo(normalized.findValue(CALORIES_CODES) { name ->
-                name.contains("energy") || name.contains("calories") || name.contains("kcal")
-            } ?: 0.0),
-            protein = roundToTwo(normalized.findValue(PROTEIN_CODES) { name -> name.contains("protein") } ?: 0.0),
-            fat = roundToTwo(normalized.findValue(FAT_CODES) { name ->
-                name.contains("fat") || name.contains("lipid")
-            } ?: 0.0),
-            carbs = roundToTwo(normalized.findValue(CARBS_CODES) { name ->
-                name.contains("carbohydrate") || name.contains("carbs")
-            } ?: 0.0),
-        )
-    }
-
-    private fun toNutrientValue(nutrient: UsdaFoodNutrient): NutrientValue? {
-        val amount = nutrient.amount ?: nutrient.value ?: return null
-        val number = nutrient.nutrient?.number ?: nutrient.nutrientNumber ?: nutrient.number
-        val name = nutrient.nutrient?.name ?: nutrient.nutrientName ?: nutrient.name
-
-        return NutrientValue(
-            number = number?.trim()?.lowercase(),
-            name = name?.trim()?.lowercase(),
-            amount = amount,
-        )
-    }
-
-    private fun List<NutrientValue>.findValue(
-        numberCodes: Set<String>,
-        nameMatcher: (String) -> Boolean,
-    ): Double? {
-        val byCode = firstOrNull { value ->
-            value.number != null && value.number in numberCodes
-        }
-        if (byCode != null) {
-            return byCode.amount
-        }
-
-        return firstOrNull { value ->
-            value.name != null && nameMatcher(value.name)
-        }?.amount
-    }
+    private fun roundDoubleToBd2(value: Double): BigDecimal =
+        BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP)
 
     private fun resolveImportedName(userId: UUID, baseName: String, fdcId: Long, currentFoodItemId: UUID? = null): String {
         val trimmed = baseName.trim().ifBlank { "USDA Food $fdcId" }
@@ -497,27 +539,10 @@ class NutritionService(
         throw DuplicateFoodItemException(trimmed)
     }
 
-    private data class NutrientValue(
-        val number: String?,
-        val name: String?,
-        val amount: Double,
-    )
-
-    private data class UsdaNutrients(
-        val calories: Double,
-        val protein: Double,
-        val fat: Double,
-        val carbs: Double,
-    )
-
     companion object {
         private const val USDA_SOURCE = "USDA"
         private const val IMPORTED_NOTE = "Imported from USDA"
         private const val MAX_FOOD_ITEM_NAME_LENGTH = 120
-        private val CALORIES_CODES = setOf("1008", "208")
-        private val PROTEIN_CODES = setOf("1003", "203")
-        private val FAT_CODES = setOf("1004", "204")
-        private val CARBS_CODES = setOf("1005", "205")
     }
 }
 

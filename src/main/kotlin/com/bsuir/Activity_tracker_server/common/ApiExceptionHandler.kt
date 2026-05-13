@@ -21,6 +21,7 @@ import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordBranchMi
 import com.bsuir.Activity_tracker_server.finance.exception.FinanceRecordNotFoundException
 import com.bsuir.Activity_tracker_server.finance.exception.PrimaryFinanceAccountDeletionException
 import com.bsuir.Activity_tracker_server.food.exception.ExternalFoodApiException
+import com.bsuir.Activity_tracker_server.food.exception.FoodNotFoundException
 import com.bsuir.Activity_tracker_server.goal.exception.GoalNotFoundException
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateFoodItemException
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateMealTypeException
@@ -212,6 +213,10 @@ class ApiExceptionHandler {
 
         return detail
     }
+
+    @ExceptionHandler(FoodNotFoundException::class)
+    fun handleFoodNotFound(exception: FoodNotFoundException): ProblemDetail =
+        buildProblemDetail(HttpStatus.NOT_FOUND, exception.message ?: "Food was not found")
 
     private fun buildProblemDetail(status: HttpStatus, detail: String): ProblemDetail {
         val problemDetail = ProblemDetail.forStatusAndDetail(status, detail)

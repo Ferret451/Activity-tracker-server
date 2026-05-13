@@ -34,6 +34,38 @@ class NutritionTotalsCalculatorTest {
     }
 
     @Test
+    fun `calculatePortion scales additional nutrients by grams`() {
+        val food = FoodItem(
+            user = User(
+                email = "test@example.com",
+                username = "user",
+                firstName = "Test",
+                lastName = "User",
+                passwordHash = "hash",
+            ),
+            name = "Oats",
+            caloriesPer100g = bd("100.00"),
+            proteinPer100g = bd("10.00"),
+            fatPer100g = bd("2.00"),
+            carbsPer100g = bd("15.00"),
+        )
+        food.additionalNutrients.add(
+            FoodItemNutrient(
+                foodItem = food,
+                nutrientNumber = "1079",
+                name = "fiber, total dietary",
+                unitName = "g",
+                amountPer100g = bd("5.00"),
+            ),
+        )
+
+        val portion = NutritionTotalsCalculator.calculatePortion(food, bd("50.00"))
+
+        assertEquals(1, portion.additionalNutrients.size)
+        assertEquals(bd("2.50"), portion.additionalNutrients.single().totalAmount)
+    }
+
+    @Test
     fun `calculate throws for non-positive grams`() {
         val food = FoodItem(
             user = User(

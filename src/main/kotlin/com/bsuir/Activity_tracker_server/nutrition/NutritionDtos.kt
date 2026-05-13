@@ -1,5 +1,6 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
+import jakarta.validation.Valid
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -23,6 +24,42 @@ data class MealTypeResponse(
     val id: UUID,
     val name: String,
     val updatedAt: OffsetDateTime,
+)
+
+data class AdditionalNutrientRequest(
+    @field:Size(max = 16)
+    val number: String? = null,
+
+    @field:NotBlank
+    @field:Size(max = 200)
+    val name: String,
+
+    @field:Size(max = 32)
+    val unitName: String? = null,
+
+    @field:DecimalMin(value = "0.0")
+    val amountPer100g: Double,
+)
+
+data class AdditionalNutrientPer100gResponse(
+    val number: String?,
+    val name: String,
+    val unitName: String?,
+    val amountPer100g: Double,
+)
+
+data class AdditionalNutrientPortionResponse(
+    val number: String?,
+    val name: String,
+    val unitName: String?,
+    val totalAmount: Double,
+)
+
+data class AdditionalNutrientTotalResponse(
+    val number: String?,
+    val name: String,
+    val unitName: String?,
+    val totalAmount: Double,
 )
 
 data class CreateFoodItemRequest(
@@ -49,6 +86,10 @@ data class CreateFoodItemRequest(
 
     @field:Size(max = 500)
     val note: String? = null,
+
+    @field:Size(max = 100)
+    @field:Valid
+    val additionalNutrients: List<AdditionalNutrientRequest>? = null,
 )
 
 data class UpdateFoodItemRequest(
@@ -75,6 +116,10 @@ data class UpdateFoodItemRequest(
 
     @field:Size(max = 500)
     val note: String? = null,
+
+    @field:Size(max = 100)
+    @field:Valid
+    val additionalNutrients: List<AdditionalNutrientRequest>? = null,
 )
 
 data class FoodItemResponse(
@@ -89,6 +134,7 @@ data class FoodItemResponse(
     val note: String?,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
+    val additionalNutrientsPer100g: List<AdditionalNutrientPer100gResponse> = emptyList(),
 )
 
 data class CreateNutritionRecordRequest(
@@ -130,6 +176,7 @@ data class NutritionRecordResponse(
     val consumedAt: OffsetDateTime,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
+    val additionalNutrients: List<AdditionalNutrientPortionResponse> = emptyList(),
 )
 
 data class NutritionMealTypeSummaryResponse(
@@ -139,6 +186,7 @@ data class NutritionMealTypeSummaryResponse(
     val totalProteinG: Double,
     val totalFatG: Double,
     val totalCarbsG: Double,
+    val additionalNutrientsTotals: List<AdditionalNutrientTotalResponse> = emptyList(),
 )
 
 data class NutritionSummaryResponse(
@@ -147,6 +195,7 @@ data class NutritionSummaryResponse(
     val totalFatG: Double,
     val totalCarbsG: Double,
     val byMealType: List<NutritionMealTypeSummaryResponse>,
+    val additionalNutrientsTotals: List<AdditionalNutrientTotalResponse> = emptyList(),
 )
 
 data class NutritionHistoryDayResponse(
@@ -156,6 +205,7 @@ data class NutritionHistoryDayResponse(
     val totalFatG: Double,
     val totalCarbsG: Double,
     val records: List<NutritionRecordResponse>,
+    val additionalNutrientsTotals: List<AdditionalNutrientTotalResponse> = emptyList(),
 )
 
 data class NutritionQueryFilter(
@@ -180,5 +230,6 @@ data class NutritionDailyResponse(
     val targetCaloriesKcal: Double,
     val calorieTargetSource: NutritionDailyCalorieTargetSource,
     val remainingCaloriesKcal: Double,
+    val additionalNutrientsTotals: List<AdditionalNutrientTotalResponse> = emptyList(),
 )
 

@@ -81,6 +81,14 @@ data class FoodNutrientsResponse(
     val proteinG: Double?,
     val fatG: Double?,
     val carbsG: Double?,
+    val additionalNutrients: List<FoodNutrientEntry> = emptyList(),
+)
+
+data class FoodNutrientEntry(
+    val name: String,
+    val amount: Double,
+    val unitName: String? = null,
+    val number: String? = null,
 )
 
 data class FoodPortionResponse(

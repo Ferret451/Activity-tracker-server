@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
+import com.bsuir.Activity_tracker_server.food.client.UsdaNutrientDescriptor
 import com.bsuir.Activity_tracker_server.profile.ProfileService
 import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
@@ -46,6 +47,10 @@ class NutritionServiceImportUsdaTest {
                     UsdaFoodNutrient(number = "1003", amount = 0.26),
                     UsdaFoodNutrient(number = "1004", amount = 0.17),
                     UsdaFoodNutrient(number = "1005", amount = 13.81),
+                    UsdaFoodNutrient(
+                        nutrient = UsdaNutrientDescriptor(number = "1079", name = "Fiber, total dietary", unitName = "g"),
+                        amount = 2.4,
+                    ),
                 ),
             ),
         )
@@ -75,6 +80,9 @@ class NutritionServiceImportUsdaTest {
         assertEquals(0.17, result.fatPer100g)
         assertEquals(13.81, result.carbsPer100g)
         assertEquals("Imported from USDA", result.note)
+        assertEquals(1, result.additionalNutrientsPer100g.size)
+        assertEquals("1079", result.additionalNutrientsPer100g.single().number)
+        assertEquals(2.4, result.additionalNutrientsPer100g.single().amountPer100g)
     }
 
     @Test
