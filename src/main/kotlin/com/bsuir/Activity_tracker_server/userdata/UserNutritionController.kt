@@ -3,12 +3,12 @@ package com.bsuir.Activity_tracker_server.userdata
 import com.bsuir.Activity_tracker_server.common.AccessPolicy
 import com.bsuir.Activity_tracker_server.nutrition.CreateFoodItemRequest
 import com.bsuir.Activity_tracker_server.nutrition.CreateNutritionRecordRequest
+import com.bsuir.Activity_tracker_server.nutrition.LogIntakeRequest
 import com.bsuir.Activity_tracker_server.nutrition.NutritionQueryFilter
 import com.bsuir.Activity_tracker_server.nutrition.NutritionService
 import com.bsuir.Activity_tracker_server.nutrition.UpdateFoodItemRequest
 import com.bsuir.Activity_tracker_server.nutrition.UpdateNutritionRecordRequest
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.validation.annotation.Validated
@@ -41,13 +41,6 @@ class UserNutritionController(
         @Valid @RequestBody request: CreateFoodItemRequest,
     ) = doWithAccess(authentication, userId) { nutritionService.createFoodItem(userId, request) }
 
-    @PostMapping("/food-items/import/usda/{fdcId}")
-    fun importFoodItemFromUsda(
-        @PathVariable userId: UUID,
-        authentication: Authentication,
-        @PathVariable @Positive fdcId: Long,
-    ) = doWithAccess(authentication, userId) { nutritionService.importFoodItemFromUsda(userId, fdcId) }
-
     @GetMapping("/food-items")
     fun getFoodItems(
         @PathVariable userId: UUID,
@@ -78,6 +71,14 @@ class UserNutritionController(
     ) {
         doWithAccess(authentication, userId) { nutritionService.deleteFoodItem(userId, foodItemId) }
     }
+
+    @PostMapping("/records/intake")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun logIntake(
+        @PathVariable userId: UUID,
+        authentication: Authentication,
+        @Valid @RequestBody request: LogIntakeRequest,
+    ) = doWithAccess(authentication, userId) { nutritionService.logIntake(userId, request) }
 
     @PostMapping("/records")
     @ResponseStatus(HttpStatus.CREATED)

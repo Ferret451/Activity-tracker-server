@@ -8,5 +8,7 @@ interface FoodItemRepository : JpaRepository<FoodItem, UUID> {
     fun findByUser_IdAndFdcId(userId: UUID, fdcId: Long): FoodItem?
     fun findAllByUser_IdOrderByCreatedAtDesc(userId: UUID): List<FoodItem>
     fun existsByUser_IdAndNameIgnoreCase(userId: UUID, name: String): Boolean
+
+    fun existsByUser_IdAndNameIgnoreCaseAndIdNot(userId: UUID, name: String, id: UUID): Boolean
 }
 

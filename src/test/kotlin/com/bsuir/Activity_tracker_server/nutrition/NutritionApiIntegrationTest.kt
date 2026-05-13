@@ -80,7 +80,7 @@ class NutritionApiIntegrationTest : ApiIntegrationTest() {
             .andExpect(jsonPath("$.totalCaloriesKcal").isNumber)
             .andExpect(jsonPath("$.byMealType[0].mealTypeId").value(mealTypeId))
 
-        // USDA import path should use mocked FoodDataClient (no real HTTP)
+        // USDA: один запрос «съел» — каталог + запись (раньше был отдельный import/usda)
         `when`(foodDataClient.getFoodById(12345L)).thenReturn(
             UsdaFoodItemResponse(
                 fdcId = 12345L,
@@ -94,10 +94,43 @@ class NutritionApiIntegrationTest : ApiIntegrationTest() {
             ),
         )
 
-        mockMvc.perform(post("/api/me/nutrition/food-items/import/usda/12345").withBearer(accessToken))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.fdcId").value(12345))
-            .andExpect(jsonPath("$.name").value("Apple"))
+        mockMvc.perform(
+            post("/api/me/nutrition/records/intake")
+                .withBearer(accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "mealTypeId": "$mealTypeId",
+                      "fdcId": 12345,
+                      "grams": 100.0
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.foodItem.fdcId").value(12345))
+            .andExpect(jsonPath("$.foodItem.name").value("Apple"))
+            .andExpect(jsonPath("$.grams").value(100.0))
+            .andExpect(jsonPath("$.totalCaloriesKcal").value(52.0))
+
+        mockMvc.perform(
+            post("/api/me/nutrition/records/intake")
+                .withBearer(accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "mealTypeId": "$mealTypeId",
+                      "fdcId": 12345,
+                      "grams": 50.0
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.grams").value(50.0))
+            .andExpect(jsonPath("$.totalCaloriesKcal").value(26.0))
     }
 
     @Test

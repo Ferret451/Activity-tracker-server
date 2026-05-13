@@ -1,7 +1,6 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -61,12 +60,6 @@ class NutritionController(
         @Valid @RequestBody request: CreateFoodItemRequest,
     ): FoodItemResponse = nutritionService.createFoodItem(extractUserId(jwt), request)
 
-    @PostMapping("/food-items/import/usda/{fdcId}")
-    fun importFoodItemFromUsda(
-        @AuthenticationPrincipal jwt: Jwt,
-        @PathVariable @Positive fdcId: Long,
-    ): FoodItemResponse = nutritionService.importFoodItemFromUsda(extractUserId(jwt), fdcId)
-
     @GetMapping("/food-items")
     fun getFoodItems(@AuthenticationPrincipal jwt: Jwt): List<FoodItemResponse> =
         nutritionService.getFoodItems(extractUserId(jwt))
@@ -92,6 +85,13 @@ class NutritionController(
     ) {
         nutritionService.deleteFoodItem(extractUserId(jwt), foodItemId)
     }
+
+    @PostMapping("/records/intake")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun logIntake(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: LogIntakeRequest,
+    ): NutritionRecordResponse = nutritionService.logIntake(extractUserId(jwt), request)
 
     @PostMapping("/records")
     @ResponseStatus(HttpStatus.CREATED)

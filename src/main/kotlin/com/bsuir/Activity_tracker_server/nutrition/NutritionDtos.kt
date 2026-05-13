@@ -1,6 +1,7 @@
 package com.bsuir.Activity_tracker_server.nutrition
 
 import jakarta.validation.Valid
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -149,6 +150,30 @@ data class CreateNutritionRecordRequest(
 
     val consumedAt: OffsetDateTime? = null,
 )
+
+/**
+ * Одна операция «съел»: либо продукт из каталога ([foodItemId]), либо USDA ([fdcId]) —
+ * сервер при необходимости создаёт/обновляет [FoodItem] и сохраняет запись приёма пищи.
+ */
+data class LogIntakeRequest(
+    val mealTypeId: UUID,
+
+    @field:DecimalMin(value = "0.1")
+    val grams: Double,
+
+    val foodItemId: UUID? = null,
+
+    val fdcId: Long? = null,
+
+    @field:Size(max = 500)
+    val note: String? = null,
+
+    val consumedAt: OffsetDateTime? = null,
+) {
+    @get:AssertTrue(message = "Укажите ровно одно из полей foodItemId или fdcId")
+    val exactlyOneFoodSource: Boolean
+        get() = (foodItemId != null) != (fdcId != null)
+}
 
 data class UpdateNutritionRecordRequest(
     val mealTypeId: UUID,

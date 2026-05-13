@@ -11,6 +11,7 @@ import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeInUseExcept
 import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeNotFoundException
 import com.bsuir.Activity_tracker_server.nutrition.exception.NutritionRecordNotFoundException
 import com.bsuir.Activity_tracker_server.profile.ProfileService
+import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
 import com.bsuir.Activity_tracker_server.user.exception.UserNotFoundException
 import org.springframework.data.domain.Sort
@@ -104,8 +105,14 @@ class NutritionService(
         return foodItemRepository.save(foodItem).toResponse()
     }
 
+    /**
+     * Оставлено для тестов и внутренних сценариев; публичный REST-вход — [logIntake].
+     */
     @Transactional
-    fun importFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItemResponse {
+    fun importFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItemResponse =
+        upsertFoodItemFromUsda(userId, fdcId).toResponse()
+
+    private fun upsertFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItem {
         require(fdcId > 0) { "Parameter 'fdcId' must be positive" }
 
         val user = userRepository.findByIdOrNull(userId)
@@ -126,7 +133,7 @@ class NutritionService(
             existingFoodItem.carbsPer100g = (parsed.carbsG ?: 0.0).toBd2()
             existingFoodItem.note = existingFoodItem.note ?: IMPORTED_NOTE
             existingFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
-            return foodItemRepository.save(existingFoodItem).toResponse()
+            return foodItemRepository.save(existingFoodItem)
         }
 
         val importedFoodItem = FoodItem(
@@ -142,7 +149,7 @@ class NutritionService(
         )
         importedFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
 
-        return foodItemRepository.save(importedFoodItem).toResponse()
+        return foodItemRepository.save(importedFoodItem)
     }
 
     @Transactional(readOnly = true)
@@ -194,10 +201,47 @@ class NutritionService(
             ?: throw UserNotFoundException(userId)
         val mealType = findMealTypeById(request.mealTypeId)
         val foodItem = findOwnedFoodItem(userId, request.foodItemId)
+        return saveNutritionRecord(
+            user = user,
+            mealType = mealType,
+            foodItem = foodItem,
+            grams = request.grams.toBd2(),
+            note = request.note?.trim()?.takeIf(String::isNotBlank),
+            consumedAt = request.consumedAt ?: OffsetDateTime.now(ZoneOffset.UTC),
+        )
+    }
 
-        val grams = request.grams.toBd2()
+    @Transactional
+    fun logIntake(userId: UUID, request: LogIntakeRequest): NutritionRecordResponse {
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw UserNotFoundException(userId)
+        val mealType = findMealTypeById(request.mealTypeId)
+        val foodItem = when {
+            request.fdcId != null -> {
+                require(request.fdcId > 0) { "Parameter 'fdcId' must be positive" }
+                upsertFoodItemFromUsda(userId, request.fdcId)
+            }
+            else -> findOwnedFoodItem(userId, request.foodItemId!!)
+        }
+        return saveNutritionRecord(
+            user = user,
+            mealType = mealType,
+            foodItem = foodItem,
+            grams = request.grams.toBd2(),
+            note = request.note?.trim()?.takeIf(String::isNotBlank),
+            consumedAt = request.consumedAt ?: OffsetDateTime.now(ZoneOffset.UTC),
+        )
+    }
+
+    private fun saveNutritionRecord(
+        user: User,
+        mealType: MealType,
+        foodItem: FoodItem,
+        grams: BigDecimal,
+        note: String?,
+        consumedAt: OffsetDateTime,
+    ): NutritionRecordResponse {
         val portionTotals = NutritionTotalsCalculator.calculatePortion(foodItem, grams)
-
         val record = NutritionRecord(
             user = user,
             mealType = mealType,
@@ -207,11 +251,10 @@ class NutritionService(
             totalProteinG = portionTotals.proteinG,
             totalFatG = portionTotals.fatG,
             totalCarbsG = portionTotals.carbsG,
-            note = request.note?.trim()?.takeIf(String::isNotBlank),
-            consumedAt = request.consumedAt ?: OffsetDateTime.now(ZoneOffset.UTC),
+            note = note,
+            consumedAt = consumedAt,
         )
         record.replaceAdditionalFromPortion(portionTotals.additionalNutrients)
-
         return nutritionRecordRepository.save(record).toResponse()
     }
 
@@ -527,17 +570,24 @@ class NutritionService(
             }
         }
 
-        if (!foodItemRepository.existsByUser_IdAndNameIgnoreCase(userId, trimmed)) {
+        if (!nameTakenByAnotherUserFood(userId, trimmed, currentFoodItemId)) {
             return trimmed.take(MAX_FOOD_ITEM_NAME_LENGTH)
         }
 
         val candidate = "$trimmed (FDC $fdcId)".take(MAX_FOOD_ITEM_NAME_LENGTH)
-        if (!foodItemRepository.existsByUser_IdAndNameIgnoreCase(userId, candidate)) {
+        if (!nameTakenByAnotherUserFood(userId, candidate, currentFoodItemId)) {
             return candidate
         }
 
         throw DuplicateFoodItemException(trimmed)
     }
+
+    private fun nameTakenByAnotherUserFood(userId: UUID, name: String, excludeFoodItemId: UUID?): Boolean =
+        if (excludeFoodItemId != null) {
+            foodItemRepository.existsByUser_IdAndNameIgnoreCaseAndIdNot(userId, name, excludeFoodItemId)
+        } else {
+            foodItemRepository.existsByUser_IdAndNameIgnoreCase(userId, name)
+        }
 
     companion object {
         private const val USDA_SOURCE = "USDA"

@@ -225,7 +225,7 @@
 | **`/api/users/{userId}/settings`** | настройки приложения |
 | **`/api/users/{userId}/weight/...`**, **`.../steps/...`** | вес и шаги |
 | **`/api/users/{userId}/activity/...`** | записи активности, сводка, тренировки (`.../workouts/...`); **без** поддерева **`/types`** — каталог типов активности только в **`/api/me/activity/types`** |
-| **`/api/users/{userId}/nutrition/...`** | продукты, записи питания, `history`, `summary`, `daily`; **без** **`/meal-types`** — каталог типов приёмов пищи только в **`/api/me/nutrition/meal-types`** |
+| **`/api/users/{userId}/nutrition/...`** | продукты, записи питания, **`records/intake`**, `history`, `summary`, `daily`; **без** **`/meal-types`** — каталог типов приёмов пищи только в **`/api/me/nutrition/meal-types`** |
 | **`/api/users/{userId}/finance/...`** | финансы (счета, категории, записи, отчёты) |
 
 ## `/api/me` — профиль текущего пользователя
@@ -763,11 +763,7 @@
 | `unitName` | string | нет | max 32 |
 | `amountPer100g` | number | да | ≥ 0 |
 
-#### `POST /api/me/nutrition/food-items/import/usda/{fdcId}` — `200`, FoodItemResponse
-
-**Path:** `fdcId` — целое **> 0** (`@Positive`).
-
-Тело запроса не требуется. Дополнительные нутриенты из ответа USDA (кроме ккал и БЖУ в четырёх полях продукта) сохраняются в `additionalNutrientsPer100g`.
+**Рекомендуемый способ зафиксировать приём пищи из USDA:** **`POST /api/me/nutrition/records/intake`** — одним запросом подтягиваются/обновляются данные FDC и создаётся запись дневника (см. ниже). Отдельного **`POST .../food-items/import/usda/{fdcId}`** больше нет.
 
 #### `GET /api/me/nutrition/food-items` — `200`, массив FoodItemResponse
 
@@ -784,6 +780,29 @@
 ### Записи питания (`records`)
 
 **Фильтры дат `from` / `to` (и те же параметры у `history` и `summary`):** значения — календарные **`LocalDate`**. На сервере интервал строится как **полуночи по UTC**: нижняя граница — `from` в `00:00:00Z`, верхняя — **до** `00:00:00Z` дня **`to` + 1 день** (т.е. `to` включается целиком в смысле UTC-календаря). Это **не** «локальные сутки» пользователя; для дня в конкретной зоне используйте **`GET /api/me/nutrition/daily`**.
+
+#### `POST /api/me/nutrition/records/intake` — `201`, **NutritionRecordResponse**
+
+Одна операция «съел»: сервер при необходимости **создаёт или обновляет** продукт в каталоге пользователя (для USDA — по `fdcId`, с запросом к FDC API) и сохраняет **запись приёма пищи** с пересчётом КБЖУ и снимком доп. нутриентов.
+
+**Тело — LogIntakeRequest**
+
+| Поле | Тип | Обяз. | Ограничения |
+|------|-----|-------|-------------|
+| `mealTypeId` | UUID | да | — |
+| `grams` | number | да | ≥ 0.1 |
+| `foodItemId` | UUID | нет* | продукт из своего каталога |
+| `fdcId` | long | нет* | id продукта в USDA FDC, **> 0**, если указан |
+| `note` | string | нет | max 500 |
+| `consumedAt` | OffsetDateTime | нет | если не передан — **текущий момент UTC** |
+
+\* **Ровно одно** из полей `foodItemId` или `fdcId` должно быть задано (иначе `400`).
+
+Если передан **`fdcId`**: существующий у пользователя продукт с тем же `fdcId` обновляется данными из API; иначе создаётся новый элемент каталога (как раньше при импорте USDA). Затем создаётся запись дневника.
+
+Если передан **`foodItemId`**: каталог не меняется по внешнему API; создаётся только запись (эквивалентно `POST .../records` с этим `foodItemId`).
+
+Зеркало для админского доступа к чужому пользователю: **`POST /api/users/{userId}/nutrition/records/intake`** — то же тело и ответ.
 
 #### `POST /api/me/nutrition/records` — `201`, NutritionRecordResponse
 

@@ -151,6 +151,70 @@ class NutritionServiceImportUsdaTest {
         verify(foodItemRepository).save(existingItem)
     }
 
+    @Test
+    fun `importFoodItemFromUsda refresh does not treat own FDC suffixed name as duplicate`() {
+        val userRepository = mock(UserRepository::class.java)
+        val mealTypeRepository = mock(MealTypeRepository::class.java)
+        val foodItemRepository = mock(FoodItemRepository::class.java)
+        val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
+        val foodDataClient = mock(FoodDataClient::class.java)
+        val profileService = mock(ProfileService::class.java)
+
+        val userId = UUID.randomUUID()
+        val user = testUser(userId)
+        val existingItemId = UUID.randomUUID()
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+
+        val existingItem = FoodItem(
+            id = existingItemId,
+            user = user,
+            name = "Apple (FDC 12345)",
+            source = "USDA",
+            fdcId = 12345L,
+            caloriesPer100g = bd("52.00"),
+            proteinPer100g = bd("0.26"),
+            fatPer100g = bd("0.17"),
+            carbsPer100g = bd("13.81"),
+            note = "Imported from USDA",
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        `when`(userRepository.findById(userId)).thenReturn(Optional.of(user))
+        `when`(foodItemRepository.findByUser_IdAndFdcId(userId, 12345L)).thenReturn(existingItem)
+        `when`(foodItemRepository.findByIdAndUser_Id(existingItemId, userId)).thenReturn(existingItem)
+        `when`(foodDataClient.getFoodById(12345L)).thenReturn(
+            UsdaFoodItemResponse(
+                fdcId = 12345L,
+                description = "Apple",
+                foodNutrients = listOf(
+                    UsdaFoodNutrient(number = "1008", amount = 52.12),
+                    UsdaFoodNutrient(number = "1003", amount = 0.26),
+                    UsdaFoodNutrient(number = "1004", amount = 0.17),
+                    UsdaFoodNutrient(number = "1005", amount = 13.81),
+                ),
+            ),
+        )
+        `when`(foodItemRepository.existsByUser_IdAndNameIgnoreCaseAndIdNot(userId, "Apple", existingItemId)).thenReturn(true)
+        `when`(foodItemRepository.existsByUser_IdAndNameIgnoreCaseAndIdNot(userId, "Apple (FDC 12345)", existingItemId)).thenReturn(false)
+        `when`(foodItemRepository.save(eq(existingItem))).thenReturn(existingItem)
+
+        val service = NutritionService(
+            userRepository = userRepository,
+            mealTypeRepository = mealTypeRepository,
+            foodItemRepository = foodItemRepository,
+            nutritionRecordRepository = nutritionRecordRepository,
+            foodDataClient = foodDataClient,
+            profileService = profileService,
+        )
+
+        val result = service.importFoodItemFromUsda(userId, 12345L)
+
+        assertEquals("Apple (FDC 12345)", result.name)
+        assertEquals(12345L, result.fdcId)
+        verify(foodItemRepository).save(existingItem)
+    }
+
     private fun testUser(userId: UUID) = User(
         id = userId,
         email = "test@example.com",
