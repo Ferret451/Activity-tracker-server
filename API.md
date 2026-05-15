@@ -373,19 +373,35 @@
 
 **Path:** `date` — `LocalDate`.
 
-**Тело — UpsertDailyStepsRequest:** `steps` — целое число, минимум 1 (`@Positive`).
+**Тело — UpsertDailyStepsRequest:**
+
+| Поле | Тип | Обяз. | Ограничения |
+|------|-----|-------|-------------|
+| `steps` | integer | да | ≥ 1 (`@Positive`) |
+| `burnedCaloriesKcal` | number | да | ≥ 0 |
+| `walkingDurationMinutes` | integer | да | ≥ 0 |
+
+Пример тела:
+
+```json
+{
+  "steps": 8500,
+  "burnedCaloriesKcal": 320.5,
+  "walkingDurationMinutes": 75
+}
+```
 
 ### `GET /api/me/steps/daily` — `200`, DailyStepsResponse
 
-**Query:** `date` — LocalDate. Если за день нет записи, `steps` = 0.
+**Query:** `date` — LocalDate. Если за день нет записи, `steps`, `burnedCaloriesKcal` и `walkingDurationMinutes` = 0.
 
 ### `GET /api/me/steps/stats` — `200`, **DailyStepsStatsResponse**
 
 **Query:** `from`, `to` — LocalDate.
 
-**DailyStepsStatsResponse:** `from`, `to`, `days` — массив **DailyStepsResponse** по каждому календарному дню (включая дни без записи, `steps` = 0).
+**DailyStepsStatsResponse:** `from`, `to`, `days` — массив **DailyStepsResponse** по каждому календарному дню (включая дни без записи: `steps`, `burnedCaloriesKcal`, `walkingDurationMinutes` = 0).
 
-**DailyStepsResponse:** `date`, `steps`, `createdAt`, `updatedAt` (последние два могут быть `null`, если записи не было).
+**DailyStepsResponse:** `date`, `steps`, `burnedCaloriesKcal`, `walkingDurationMinutes`, `createdAt`, `updatedAt` (последние два могут быть `null`, если записи не было).
 
 ---
 

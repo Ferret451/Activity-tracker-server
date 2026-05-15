@@ -33,7 +33,9 @@ class NutritionService(
     private val userRepository: UserRepository,
     private val mealTypeRepository: MealTypeRepository,
     private val foodItemRepository: FoodItemRepository,
+    private val foodItemNutrientRepository: FoodItemNutrientRepository,
     private val nutritionRecordRepository: NutritionRecordRepository,
+    private val nutritionRecordNutrientRepository: NutritionRecordNutrientRepository,
     private val foodDataClient: FoodDataClient,
     private val profileService: ProfileService,
 ) {
@@ -100,7 +102,7 @@ class NutritionService(
             carbsPer100g = request.carbsPer100g.toBd2(),
             note = request.note?.trim()?.takeIf(String::isNotBlank),
         )
-        foodItem.replaceAdditionalFromRequests(request.additionalNutrients)
+        replaceAdditionalFromRequests(foodItem, request.additionalNutrients)
 
         return foodItemRepository.save(foodItem).toResponse()
     }
@@ -132,7 +134,7 @@ class NutritionService(
             existingFoodItem.fatPer100g = (parsed.fatG ?: 0.0).toBd2()
             existingFoodItem.carbsPer100g = (parsed.carbsG ?: 0.0).toBd2()
             existingFoodItem.note = existingFoodItem.note ?: IMPORTED_NOTE
-            existingFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
+            replaceAdditionalFromFoodEntries(existingFoodItem, parsed.additionalNutrients)
             return foodItemRepository.save(existingFoodItem)
         }
 
@@ -147,7 +149,7 @@ class NutritionService(
             carbsPer100g = (parsed.carbsG ?: 0.0).toBd2(),
             note = IMPORTED_NOTE,
         )
-        importedFoodItem.replaceAdditionalFromFoodEntries(parsed.additionalNutrients)
+        replaceAdditionalFromFoodEntries(importedFoodItem, parsed.additionalNutrients)
 
         return foodItemRepository.save(importedFoodItem)
     }
@@ -180,7 +182,7 @@ class NutritionService(
         foodItem.fatPer100g = request.fatPer100g.toBd2()
         foodItem.carbsPer100g = request.carbsPer100g.toBd2()
         foodItem.note = request.note?.trim()?.takeIf(String::isNotBlank)
-        foodItem.replaceAdditionalFromRequests(request.additionalNutrients)
+        replaceAdditionalFromRequests(foodItem, request.additionalNutrients)
 
         return foodItemRepository.save(foodItem).toResponse()
     }
@@ -254,7 +256,7 @@ class NutritionService(
             note = note,
             consumedAt = consumedAt,
         )
-        record.replaceAdditionalFromPortion(portionTotals.additionalNutrients)
+        replaceAdditionalFromPortion(record, portionTotals.additionalNutrients)
         return nutritionRecordRepository.save(record).toResponse()
     }
 
@@ -285,7 +287,7 @@ class NutritionService(
         record.totalCarbsG = portionTotals.carbsG
         record.note = request.note?.trim()?.takeIf(String::isNotBlank)
         record.consumedAt = request.consumedAt
-        record.replaceAdditionalFromPortion(portionTotals.additionalNutrients)
+        replaceAdditionalFromPortion(record, portionTotals.additionalNutrients)
 
         return nutritionRecordRepository.save(record).toResponse()
     }
@@ -457,12 +459,13 @@ class NutritionService(
         nutritionRecordRepository.findByIdAndUser_Id(recordId, userId)
             ?: throw NutritionRecordNotFoundException(recordId)
 
-    private fun FoodItem.replaceAdditionalFromRequests(requests: List<AdditionalNutrientRequest>?) {
-        additionalNutrients.clear()
+    private fun replaceAdditionalFromRequests(foodItem: FoodItem, requests: List<AdditionalNutrientRequest>?) {
+        foodItemNutrientRepository.deleteByFoodItemId(foodItem.id)
+        foodItem.additionalNutrients.clear()
         requests.orEmpty().forEach { req ->
-            additionalNutrients.add(
+            foodItem.additionalNutrients.add(
                 FoodItemNutrient(
-                    foodItem = this,
+                    foodItem = foodItem,
                     nutrientNumber = req.number?.trim()?.takeIf { it.isNotEmpty() },
                     name = req.name.trim().take(200),
                     unitName = req.unitName?.trim()?.takeIf { it.isNotEmpty() },
@@ -472,12 +475,13 @@ class NutritionService(
         }
     }
 
-    private fun FoodItem.replaceAdditionalFromFoodEntries(entries: List<FoodNutrientEntry>) {
-        additionalNutrients.clear()
+    private fun replaceAdditionalFromFoodEntries(foodItem: FoodItem, entries: List<FoodNutrientEntry>) {
+        foodItemNutrientRepository.deleteByFoodItemId(foodItem.id)
+        foodItem.additionalNutrients.clear()
         entries.forEach { e ->
-            additionalNutrients.add(
+            foodItem.additionalNutrients.add(
                 FoodItemNutrient(
-                    foodItem = this,
+                    foodItem = foodItem,
                     nutrientNumber = e.number?.trim()?.takeIf { it.isNotEmpty() },
                     name = e.name.trim().take(200),
                     unitName = e.unitName?.trim()?.takeIf { it.isNotEmpty() },
@@ -487,12 +491,13 @@ class NutritionService(
         }
     }
 
-    private fun NutritionRecord.replaceAdditionalFromPortion(totals: List<PortionNutrientTotal>) {
-        additionalNutrients.clear()
+    private fun replaceAdditionalFromPortion(record: NutritionRecord, totals: List<PortionNutrientTotal>) {
+        nutritionRecordNutrientRepository.deleteByNutritionRecordId(record.id)
+        record.additionalNutrients.clear()
         totals.forEach { p ->
-            additionalNutrients.add(
+            record.additionalNutrients.add(
                 NutritionRecordNutrient(
-                    nutritionRecord = this,
+                    nutritionRecord = record,
                     nutrientNumber = p.nutrientNumber,
                     name = p.name.trim().take(200),
                     unitName = p.unitName?.trim()?.takeIf { it.isNotEmpty() },

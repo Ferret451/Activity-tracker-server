@@ -64,6 +64,53 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	addTestListener(
+		object : org.gradle.api.tasks.testing.TestListener {
+			override fun beforeSuite(suite: org.gradle.api.tasks.testing.TestDescriptor) {}
+
+			override fun afterSuite(suite: org.gradle.api.tasks.testing.TestDescriptor, result: org.gradle.api.tasks.testing.TestResult) {
+				if (suite.parent == null) {
+					// ASCII-only: Windows consoles often use a legacy code page and mangle UTF-8 Cyrillic.
+					logger.lifecycle(
+						"Test task '{}': total={}, passed={}, failed={}, skipped={}",
+						name,
+						result.testCount,
+						result.successfulTestCount,
+						result.failedTestCount,
+						result.skippedTestCount,
+					)
+				}
+			}
+
+			override fun beforeTest(testDescriptor: org.gradle.api.tasks.testing.TestDescriptor) {}
+
+			override fun afterTest(testDescriptor: org.gradle.api.tasks.testing.TestDescriptor, result: org.gradle.api.tasks.testing.TestResult) {}
+		},
+	)
+}
+
+val testSourceSet = sourceSets.named("test").get()
+
+tasks.register<Test>("unitTest") {
+	group = "verification"
+	description = "Тесты без суффикса IntegrationTest (без Spring Boot + Testcontainers для API)"
+	testClassesDirs = testSourceSet.output.classesDirs
+	classpath = testSourceSet.runtimeClasspath
+	useJUnitPlatform()
+	filter {
+		excludeTestsMatching("*IntegrationTest")
+	}
+}
+
+tasks.register<Test>("integrationTest") {
+	group = "verification"
+	description = "Только *IntegrationTest (Spring Boot, MockMvc, PostgreSQL в Testcontainers)"
+	testClassesDirs = testSourceSet.output.classesDirs
+	classpath = testSourceSet.runtimeClasspath
+	useJUnitPlatform()
+	filter {
+		includeTestsMatching("*IntegrationTest")
+	}
 }
 
 tasks.withType<JavaCompile> {

@@ -2,6 +2,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
+import com.bsuir.Activity_tracker_server.food.client.UsdaNutrientDescriptor
 import com.bsuir.Activity_tracker_server.support.ApiIntegrationTest
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
@@ -131,6 +132,86 @@ class NutritionApiIntegrationTest : ApiIntegrationTest() {
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.grams").value(50.0))
             .andExpect(jsonPath("$.totalCaloriesKcal").value(26.0))
+    }
+
+    @Test
+    fun `updating nutrition record grams recalculates totals when additional nutrients exist`() {
+        val accessToken = registerUser("nutrition-update-grams").accessToken
+
+        val mealTypeId = mockMvc.perform(get("/api/me/nutrition/meal-types").withBearer(accessToken))
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+            .let { objectMapper.readTree(it).path(0).path("id").asText() }
+
+        `when`(foodDataClient.getFoodById(54321L)).thenReturn(
+            UsdaFoodItemResponse(
+                fdcId = 54321L,
+                description = "Watermelon",
+                foodNutrients = listOf(
+                    UsdaFoodNutrient(number = "1008", amount = 30.0),
+                    UsdaFoodNutrient(number = "1003", amount = 0.6),
+                    UsdaFoodNutrient(number = "1004", amount = 0.2),
+                    UsdaFoodNutrient(number = "1005", amount = 7.6),
+                    UsdaFoodNutrient(
+                        nutrient = UsdaNutrientDescriptor(number = "255", name = "Water", unitName = "g"),
+                        amount = 91.0,
+                    ),
+                ),
+            ),
+        )
+
+        val intakeResponse = mockMvc.perform(
+            post("/api/me/nutrition/records/intake")
+                .withBearer(accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "mealTypeId": "$mealTypeId",
+                      "fdcId": 54321,
+                      "grams": 100.0,
+                      "consumedAt": "2026-05-14T09:00:00Z"
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.grams").value(100.0))
+            .andExpect(jsonPath("$.totalCaloriesKcal").value(30.0))
+            .andExpect(jsonPath("$.additionalNutrients[0].number").value("255"))
+            .andExpect(jsonPath("$.additionalNutrients[0].name").value("water"))
+            .andExpect(jsonPath("$.additionalNutrients[0].totalAmount").value(91.0))
+            .andReturn()
+            .response
+            .contentAsString
+            .let { objectMapper.readTree(it) }
+
+        val recordId = intakeResponse.path("id").asText()
+        val foodItemId = intakeResponse.path("foodItem").path("id").asText()
+
+        mockMvc.perform(
+            put("/api/me/nutrition/records/$recordId")
+                .withBearer(accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "consumedAt": "2026-05-14T09:00:00Z",
+                      "foodItemId": "$foodItemId",
+                      "grams": 123.0,
+                      "mealTypeId": "$mealTypeId"
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.grams").value(123.0))
+            .andExpect(jsonPath("$.totalCaloriesKcal").value(36.9))
+            .andExpect(jsonPath("$.additionalNutrients[0].number").value("255"))
+            .andExpect(jsonPath("$.additionalNutrients[0].name").value("water"))
+            .andExpect(jsonPath("$.additionalNutrients[0].totalAmount").value(111.93))
     }
 
     @Test

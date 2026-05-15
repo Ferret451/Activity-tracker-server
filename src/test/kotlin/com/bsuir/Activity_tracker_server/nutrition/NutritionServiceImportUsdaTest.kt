@@ -27,7 +27,9 @@ class NutritionServiceImportUsdaTest {
         val userRepository = mock(UserRepository::class.java)
         val mealTypeRepository = mock(MealTypeRepository::class.java)
         val foodItemRepository = mock(FoodItemRepository::class.java)
+        val foodItemNutrientRepository = mock(FoodItemNutrientRepository::class.java)
         val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
+        val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
 
@@ -65,7 +67,9 @@ class NutritionServiceImportUsdaTest {
             userRepository = userRepository,
             mealTypeRepository = mealTypeRepository,
             foodItemRepository = foodItemRepository,
+            foodItemNutrientRepository = foodItemNutrientRepository,
             nutritionRecordRepository = nutritionRecordRepository,
+            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
             foodDataClient = foodDataClient,
             profileService = profileService,
         )
@@ -90,7 +94,9 @@ class NutritionServiceImportUsdaTest {
         val userRepository = mock(UserRepository::class.java)
         val mealTypeRepository = mock(MealTypeRepository::class.java)
         val foodItemRepository = mock(FoodItemRepository::class.java)
+        val foodItemNutrientRepository = mock(FoodItemNutrientRepository::class.java)
         val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
+        val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
 
@@ -132,7 +138,9 @@ class NutritionServiceImportUsdaTest {
             userRepository = userRepository,
             mealTypeRepository = mealTypeRepository,
             foodItemRepository = foodItemRepository,
+            foodItemNutrientRepository = foodItemNutrientRepository,
             nutritionRecordRepository = nutritionRecordRepository,
+            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
             foodDataClient = foodDataClient,
             profileService = profileService,
         )
@@ -156,7 +164,9 @@ class NutritionServiceImportUsdaTest {
         val userRepository = mock(UserRepository::class.java)
         val mealTypeRepository = mock(MealTypeRepository::class.java)
         val foodItemRepository = mock(FoodItemRepository::class.java)
+        val foodItemNutrientRepository = mock(FoodItemNutrientRepository::class.java)
         val nutritionRecordRepository = mock(NutritionRecordRepository::class.java)
+        val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
 
@@ -203,7 +213,9 @@ class NutritionServiceImportUsdaTest {
             userRepository = userRepository,
             mealTypeRepository = mealTypeRepository,
             foodItemRepository = foodItemRepository,
+            foodItemNutrientRepository = foodItemNutrientRepository,
             nutritionRecordRepository = nutritionRecordRepository,
+            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
             foodDataClient = foodDataClient,
             profileService = profileService,
         )

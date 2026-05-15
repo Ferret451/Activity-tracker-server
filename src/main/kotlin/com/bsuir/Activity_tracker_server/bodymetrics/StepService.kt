@@ -24,15 +24,21 @@ class StepService(
                     userId = user.id,
                     stepDate = date,
                     steps = request.steps,
+                    burnedCaloriesKcal = request.burnedCaloriesKcal,
+                    walkingDurationMinutes = request.walkingDurationMinutes,
                 )
             } else {
                 existing.steps = request.steps
+                existing.burnedCaloriesKcal = request.burnedCaloriesKcal
+                existing.walkingDurationMinutes = request.walkingDurationMinutes
                 existing
             }
         val saved = dailyStepCountRepository.save(entity)
         return DailyStepsResponse(
             date = saved.stepDate,
             steps = saved.steps,
+            burnedCaloriesKcal = saved.burnedCaloriesKcal,
+            walkingDurationMinutes = saved.walkingDurationMinutes,
             createdAt = saved.createdAt,
             updatedAt = saved.updatedAt,
         )
@@ -45,6 +51,8 @@ class StepService(
         return DailyStepsResponse(
             date = date,
             steps = row?.steps ?: 0,
+            burnedCaloriesKcal = row?.burnedCaloriesKcal ?: 0.0,
+            walkingDurationMinutes = row?.walkingDurationMinutes ?: 0,
             createdAt = row?.createdAt,
             updatedAt = row?.updatedAt,
         )
@@ -66,6 +74,8 @@ class StepService(
                 DailyStepsResponse(
                     date = d,
                     steps = row?.steps ?: 0,
+                    burnedCaloriesKcal = row?.burnedCaloriesKcal ?: 0.0,
+                    walkingDurationMinutes = row?.walkingDurationMinutes ?: 0,
                     createdAt = row?.createdAt,
                     updatedAt = row?.updatedAt,
                 ),

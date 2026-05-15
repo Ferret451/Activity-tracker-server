@@ -1,6 +1,7 @@
 package com.bsuir.Activity_tracker_server.bodymetrics
 
 import jakarta.validation.constraints.DecimalMin
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import java.math.BigDecimal
@@ -50,11 +51,19 @@ data class WeightStatsResponse(
 data class UpsertDailyStepsRequest(
     @field:Positive
     val steps: Int,
+
+    @field:DecimalMin(value = "0.0")
+    val burnedCaloriesKcal: Double,
+
+    @field:Min(0)
+    val walkingDurationMinutes: Int,
 )
 
 data class DailyStepsResponse(
     val date: LocalDate,
     val steps: Int,
+    val burnedCaloriesKcal: Double,
+    val walkingDurationMinutes: Int,
     val createdAt: OffsetDateTime?,
     val updatedAt: OffsetDateTime?,
 )

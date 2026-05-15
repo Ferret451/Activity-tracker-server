@@ -36,6 +36,12 @@ class DailyStepCount(
     @Column(name = "steps", nullable = false)
     var steps: Int,
 
+    @Column(name = "burned_calories_kcal", nullable = false)
+    var burnedCaloriesKcal: Double,
+
+    @Column(name = "walking_duration_minutes", nullable = false)
+    var walkingDurationMinutes: Int,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 
