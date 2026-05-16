@@ -241,7 +241,7 @@ data class NutritionQueryFilter(
 )
 
 enum class NutritionDailyCalorieTargetSource {
-    EXPLICIT_DAILY_TARGET,
+    USER_GOAL,
     BMR_GOAL_ADJUSTED,
 }
 

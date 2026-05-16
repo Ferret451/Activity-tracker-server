@@ -268,7 +268,6 @@
 | `sex` | string | См. enum `Sex` |
 | `activityLevel` | string | См. enum `ActivityLevel` |
 | `calorieGoal` | string | См. enum `CalorieGoal` |
-| `dailyCalorieTargetKcal` | integer \| null | Явная суточная цель в ккал (если задана) |
 
 ### `PUT /api/me/profile`
 
@@ -284,7 +283,6 @@
 | `sex` | string | да | enum `Sex` |
 | `activityLevel` | string | да | enum `ActivityLevel` |
 | `calorieGoal` | string | да | enum `CalorieGoal` |
-| `dailyCalorieTargetKcal` | integer | нет | ≥ 0 (если передано) |
 
 ### `PUT /api/me/password`
 
@@ -564,6 +562,8 @@
 ### Типы активности
 
 Каталог **общий** для всех пользователей. **`POST` / `PUT` / `DELETE`** — только **`SCOPE_ADMIN`**.
+
+При развёртывании Flyway заполняет справочник **24** типами активности (миграция `V23__seed_default_activity_types.sql`, с учётом `Walking` из `V18`): ходьба (`Walking`, `Walking, light`, `Walking, brisk`), бег (`Jogging`, `Running, moderate`), плавание (`Swimming, leisure`, `Swimming, moderate`), активности без движения с низким MET (`Sitting`, `Meditation`, `Reading`, `Resting`), а также велосипед, походы, эллипс, гребля, танцы, HIIT, командные виды спорта, йога, растяжка, силовые. Уникальность: пара `(name, met)` без учёта регистра и пробелов по краям.
 
 #### `POST /api/me/activity/types`
 
@@ -894,7 +894,7 @@
 | `date` | LocalDate | нет | Календарный день в зоне `zone`. Если не передан — **сегодня** в этой зоне (`LocalDate.now(zone)`). |
 | `zone` | string (ZoneId) | нет | IANA, например `Europe/Minsk`. Пустое / не передано — **`UTC`**. Некорректный идентификатор — **`400`**. |
 
-**Цель калорий (`targetCaloriesKcal`):** если в профиле задано **`dailyCalorieTargetKcal`**, используется оно (**`calorieTargetSource`:** `EXPLICIT_DAILY_TARGET`); иначе **`goalAdjustedDailyCalories`** из расчёта BMR (**`BMR_GOAL_ADJUSTED`**), как у **`GET /api/me/bmr`**.
+**Цель калорий (`targetCaloriesKcal`):** если есть активная цель **`DAILY_CALORIES`** (`GET /api/me/goals`), используется её **`targetValue`** (**`calorieTargetSource`:** `USER_GOAL`); иначе **`goalAdjustedDailyCalories`** из расчёта BMR (**`BMR_GOAL_ADJUSTED`**), как у **`GET /api/me/bmr`** (учитывает **`calorieGoal`** профиля).
 
 **Остаток:** `remainingCaloriesKcal` = `targetCaloriesKcal` − сумма `totalCaloriesKcal` за день (может быть отрицательным при перевыполнении).
 
@@ -911,7 +911,7 @@
 | `totalFatG` | number |
 | `totalCarbsG` | number |
 | `targetCaloriesKcal` | number |
-| `calorieTargetSource` | string | `EXPLICIT_DAILY_TARGET` \| `BMR_GOAL_ADJUSTED` |
+| `calorieTargetSource` | string | `USER_GOAL` \| `BMR_GOAL_ADJUSTED` |
 | `remainingCaloriesKcal` | number |
 | `additionalNutrientsTotals` | массив **AdditionalNutrientTotalResponse** |
 
@@ -1100,11 +1100,14 @@
 
 ### GoalType
 
-- `WEIGHT_KG`
-- `DAILY_CALORIES`
-- `DAILY_PROTEIN_G`
-- `DAILY_FAT_G`
-- `DAILY_CARBS_G`
+- `WEIGHT_KG` — цель по весу, кг
+- `DAILY_CALORIES` — суточная цель по потреблённым калориям, ккал
+- `DAILY_PROTEIN_G` — суточная цель по белку, г
+- `DAILY_FAT_G` — суточная цель по жирам, г
+- `DAILY_CARBS_G` — суточная цель по углеводам, г
+- `DAILY_STEPS` — суточная цель по шагам (см. учёт шагов `/api/me/steps`)
+- `DAILY_WALKING_MINUTES` — суточная цель по времени ходьбы, мин
+- `DAILY_BURNED_CALORIES_KCAL` — суточная цель по сожжённым калориям за активность/ходьбу, ккал
 
 ### GoalStatus
 

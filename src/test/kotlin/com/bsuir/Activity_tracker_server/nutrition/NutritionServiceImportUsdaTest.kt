@@ -4,6 +4,7 @@ import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.food.client.UsdaFoodNutrient
 import com.bsuir.Activity_tracker_server.food.client.UsdaNutrientDescriptor
+import com.bsuir.Activity_tracker_server.goal.GoalService
 import com.bsuir.Activity_tracker_server.profile.ProfileService
 import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
@@ -14,6 +15,10 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
+import org.springframework.transaction.support.TransactionTemplate
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -32,6 +37,7 @@ class NutritionServiceImportUsdaTest {
         val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
+        val goalService = mock(GoalService::class.java)
 
         val userId = UUID.randomUUID()
         val user = testUser(userId)
@@ -63,15 +69,16 @@ class NutritionServiceImportUsdaTest {
             foodItem
         }
 
-        val service = NutritionService(
-            userRepository = userRepository,
-            mealTypeRepository = mealTypeRepository,
-            foodItemRepository = foodItemRepository,
-            foodItemNutrientRepository = foodItemNutrientRepository,
-            nutritionRecordRepository = nutritionRecordRepository,
-            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
-            foodDataClient = foodDataClient,
-            profileService = profileService,
+        val service = nutritionService(
+            userRepository,
+            mealTypeRepository,
+            foodItemRepository,
+            foodItemNutrientRepository,
+            nutritionRecordRepository,
+            nutritionRecordNutrientRepository,
+            foodDataClient,
+            profileService,
+            goalService,
         )
 
         val result = service.importFoodItemFromUsda(userId, 12345L)
@@ -99,6 +106,7 @@ class NutritionServiceImportUsdaTest {
         val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
+        val goalService = mock(GoalService::class.java)
 
         val userId = UUID.randomUUID()
         val user = testUser(userId)
@@ -134,15 +142,16 @@ class NutritionServiceImportUsdaTest {
         )
         `when`(foodItemRepository.save(eq(existingItem))).thenReturn(existingItem)
 
-        val service = NutritionService(
-            userRepository = userRepository,
-            mealTypeRepository = mealTypeRepository,
-            foodItemRepository = foodItemRepository,
-            foodItemNutrientRepository = foodItemNutrientRepository,
-            nutritionRecordRepository = nutritionRecordRepository,
-            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
-            foodDataClient = foodDataClient,
-            profileService = profileService,
+        val service = nutritionService(
+            userRepository,
+            mealTypeRepository,
+            foodItemRepository,
+            foodItemNutrientRepository,
+            nutritionRecordRepository,
+            nutritionRecordNutrientRepository,
+            foodDataClient,
+            profileService,
+            goalService,
         )
 
         val result = service.importFoodItemFromUsda(userId, 54321L)
@@ -169,6 +178,7 @@ class NutritionServiceImportUsdaTest {
         val nutritionRecordNutrientRepository = mock(NutritionRecordNutrientRepository::class.java)
         val foodDataClient = mock(FoodDataClient::class.java)
         val profileService = mock(ProfileService::class.java)
+        val goalService = mock(GoalService::class.java)
 
         val userId = UUID.randomUUID()
         val user = testUser(userId)
@@ -209,15 +219,16 @@ class NutritionServiceImportUsdaTest {
         `when`(foodItemRepository.existsByUser_IdAndNameIgnoreCaseAndIdNot(userId, "Apple (FDC 12345)", existingItemId)).thenReturn(false)
         `when`(foodItemRepository.save(eq(existingItem))).thenReturn(existingItem)
 
-        val service = NutritionService(
-            userRepository = userRepository,
-            mealTypeRepository = mealTypeRepository,
-            foodItemRepository = foodItemRepository,
-            foodItemNutrientRepository = foodItemNutrientRepository,
-            nutritionRecordRepository = nutritionRecordRepository,
-            nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
-            foodDataClient = foodDataClient,
-            profileService = profileService,
+        val service = nutritionService(
+            userRepository,
+            mealTypeRepository,
+            foodItemRepository,
+            foodItemNutrientRepository,
+            nutritionRecordRepository,
+            nutritionRecordNutrientRepository,
+            foodDataClient,
+            profileService,
+            goalService,
         )
 
         val result = service.importFoodItemFromUsda(userId, 12345L)
@@ -226,6 +237,42 @@ class NutritionServiceImportUsdaTest {
         assertEquals(12345L, result.fdcId)
         verify(foodItemRepository).save(existingItem)
     }
+
+    private fun nutritionService(
+        userRepository: UserRepository,
+        mealTypeRepository: MealTypeRepository,
+        foodItemRepository: FoodItemRepository,
+        foodItemNutrientRepository: FoodItemNutrientRepository,
+        nutritionRecordRepository: NutritionRecordRepository,
+        nutritionRecordNutrientRepository: NutritionRecordNutrientRepository,
+        foodDataClient: FoodDataClient,
+        profileService: ProfileService,
+        goalService: GoalService,
+    ) = NutritionService(
+        userRepository = userRepository,
+        mealTypeRepository = mealTypeRepository,
+        foodItemRepository = foodItemRepository,
+        foodItemNutrientRepository = foodItemNutrientRepository,
+        nutritionRecordRepository = nutritionRecordRepository,
+        nutritionRecordNutrientRepository = nutritionRecordNutrientRepository,
+        foodDataClient = foodDataClient,
+        profileService = profileService,
+        goalService = goalService,
+        transactionTemplate = noOpTransactionTemplate(),
+    )
+
+    private fun noOpTransactionTemplate(): TransactionTemplate =
+        TransactionTemplate(
+            object : PlatformTransactionManager {
+                override fun getTransaction(
+                    definition: org.springframework.transaction.TransactionDefinition?,
+                ): TransactionStatus = SimpleTransactionStatus()
+
+                override fun commit(status: TransactionStatus) {}
+
+                override fun rollback(status: TransactionStatus) {}
+            },
+        )
 
     private fun testUser(userId: UUID) = User(
         id = userId,

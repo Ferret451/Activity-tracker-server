@@ -35,7 +35,6 @@ class ProfileService(
                 sex = request.sex
                 activityLevel = request.activityLevel
                 calorieGoal = request.calorieGoal
-                dailyCalorieTargetKcal = request.dailyCalorieTargetKcal
             }
             ?: UserProfile(
                 userId = userId,
@@ -46,7 +45,6 @@ class ProfileService(
                 sex = request.sex,
                 activityLevel = request.activityLevel,
                 calorieGoal = request.calorieGoal,
-                dailyCalorieTargetKcal = request.dailyCalorieTargetKcal,
             )
 
         return userProfileRepository.save(profile).toResponse()

@@ -51,9 +51,6 @@ class UserProfile(
     @Column(name = "calorie_goal", nullable = false, length = 30)
     var calorieGoal: CalorieGoal = CalorieGoal.MAINTAIN,
 
-    @Column(name = "daily_calorie_target_kcal")
-    var dailyCalorieTargetKcal: Int? = null,
-
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

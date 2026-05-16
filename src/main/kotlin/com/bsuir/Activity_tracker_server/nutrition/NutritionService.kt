@@ -3,6 +3,7 @@ package com.bsuir.Activity_tracker_server.nutrition
 import com.bsuir.Activity_tracker_server.food.FoodNutrientEntry
 import com.bsuir.Activity_tracker_server.food.UsdaNutrientsParser
 import com.bsuir.Activity_tracker_server.food.client.FoodDataClient
+import com.bsuir.Activity_tracker_server.food.client.UsdaFoodItemResponse
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateFoodItemException
 import com.bsuir.Activity_tracker_server.nutrition.exception.DuplicateMealTypeException
 import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemInUseException
@@ -10,6 +11,7 @@ import com.bsuir.Activity_tracker_server.nutrition.exception.FoodItemNotFoundExc
 import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeInUseException
 import com.bsuir.Activity_tracker_server.nutrition.exception.MealTypeNotFoundException
 import com.bsuir.Activity_tracker_server.nutrition.exception.NutritionRecordNotFoundException
+import com.bsuir.Activity_tracker_server.goal.GoalService
 import com.bsuir.Activity_tracker_server.profile.ProfileService
 import com.bsuir.Activity_tracker_server.user.User
 import com.bsuir.Activity_tracker_server.user.UserRepository
@@ -19,6 +21,7 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.DateTimeException
@@ -38,6 +41,8 @@ class NutritionService(
     private val nutritionRecordNutrientRepository: NutritionRecordNutrientRepository,
     private val foodDataClient: FoodDataClient,
     private val profileService: ProfileService,
+    private val goalService: GoalService,
+    private val transactionTemplate: TransactionTemplate,
 ) {
 
     @Transactional
@@ -110,17 +115,18 @@ class NutritionService(
     /**
      * Оставлено для тестов и внутренних сценариев; публичный REST-вход — [logIntake].
      */
-    @Transactional
-    fun importFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItemResponse =
-        upsertFoodItemFromUsda(userId, fdcId).toResponse()
-
-    private fun upsertFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItem {
+    fun importFoodItemFromUsda(userId: UUID, fdcId: Long): FoodItemResponse {
         require(fdcId > 0) { "Parameter 'fdcId' must be positive" }
+        val usdaFood = foodDataClient.getFoodById(fdcId)
+        return transactionTemplate.execute {
+            persistFoodItemFromUsda(userId, fdcId, usdaFood)
+        }!!.toResponse()
+    }
 
+    private fun persistFoodItemFromUsda(userId: UUID, fdcId: Long, usdaFood: UsdaFoodItemResponse): FoodItem {
         val user = userRepository.findByIdOrNull(userId)
             ?: throw UserNotFoundException(userId)
 
-        val usdaFood = foodDataClient.getFoodById(fdcId)
         val parsed = UsdaNutrientsParser.extractNutrients(usdaFood.foodNutrients)
         val baseName = usdaFood.description?.trim()?.takeIf(String::isNotBlank)
             ?: "USDA Food $fdcId"
@@ -213,16 +219,26 @@ class NutritionService(
         )
     }
 
-    @Transactional
     fun logIntake(userId: UUID, request: LogIntakeRequest): NutritionRecordResponse {
+        val prefetchedUsdaFood = request.fdcId?.let { fdcId ->
+            require(fdcId > 0) { "Parameter 'fdcId' must be positive" }
+            foodDataClient.getFoodById(fdcId)
+        }
+        return transactionTemplate.execute {
+            logIntakeInTransaction(userId, request, prefetchedUsdaFood)
+        }!!
+    }
+
+    private fun logIntakeInTransaction(
+        userId: UUID,
+        request: LogIntakeRequest,
+        prefetchedUsdaFood: UsdaFoodItemResponse?,
+    ): NutritionRecordResponse {
         val user = userRepository.findByIdOrNull(userId)
             ?: throw UserNotFoundException(userId)
         val mealType = findMealTypeById(request.mealTypeId)
         val foodItem = when {
-            request.fdcId != null -> {
-                require(request.fdcId > 0) { "Parameter 'fdcId' must be positive" }
-                upsertFoodItemFromUsda(userId, request.fdcId)
-            }
+            request.fdcId != null -> persistFoodItemFromUsda(userId, request.fdcId, prefetchedUsdaFood!!)
             else -> findOwnedFoodItem(userId, request.foodItemId!!)
         }
         return saveNutritionRecord(
@@ -381,10 +397,10 @@ class NutritionService(
             records.flatMap { it.additionalNutrients },
         )
 
-        val profile = profileService.getProfile(userId)
+        profileService.getProfile(userId)
         val (targetKcal, source) =
-            profile.dailyCalorieTargetKcal?.let { explicit ->
-                explicit.toDouble() to NutritionDailyCalorieTargetSource.EXPLICIT_DAILY_TARGET
+            goalService.resolveActiveDailyCalorieTargetKcal(userId)?.let { target ->
+                target to NutritionDailyCalorieTargetSource.USER_GOAL
             } ?: run {
                 profileService.calculateBmr(userId).goalAdjustedDailyCalories to
                     NutritionDailyCalorieTargetSource.BMR_GOAL_ADJUSTED

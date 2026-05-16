@@ -6,6 +6,9 @@ enum class GoalType {
     DAILY_PROTEIN_G,
     DAILY_FAT_G,
     DAILY_CARBS_G,
+    DAILY_STEPS,
+    DAILY_WALKING_MINUTES,
+    DAILY_BURNED_CALORIES_KCAL,
 }
 
 enum class GoalStatus {

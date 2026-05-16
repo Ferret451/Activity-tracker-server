@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  app:
+  server:
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,7 +21,7 @@ services:
     depends_on:
       - postgres
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/activity_tracker
+      DB_URL: jdbc:postgresql://postgres:5432/activity_tracker?tcpKeepAlive=true
       DB_USERNAME: activity_user
       DB_PASSWORD: activity_password
       JWT_SECRET: ${JWT_SECRET:-dev-secret}

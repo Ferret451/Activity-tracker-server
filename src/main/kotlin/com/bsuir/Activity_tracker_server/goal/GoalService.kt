@@ -42,6 +42,17 @@ class GoalService(
     }
 
     @Transactional(readOnly = true)
+    fun resolveActiveDailyCalorieTargetKcal(userId: UUID): Double? =
+        userGoalRepository
+            .findFirstByUser_IdAndGoalTypeAndStatusOrderByCreatedAtDesc(
+                userId = userId,
+                goalType = GoalType.DAILY_CALORIES,
+                status = GoalStatus.ACTIVE,
+            )
+            ?.targetValue
+            ?.toDouble()
+
+    @Transactional(readOnly = true)
     fun getGoals(userId: UUID): List<UserGoalResponse> =
         userGoalRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
             .map { it.toResponse() }

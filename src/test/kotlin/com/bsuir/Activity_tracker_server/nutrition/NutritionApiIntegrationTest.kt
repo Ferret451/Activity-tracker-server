@@ -233,13 +233,30 @@ class NutritionApiIntegrationTest : ApiIntegrationTest() {
                       "age": 25,
                       "sex": "MALE",
                       "activityLevel": "MODERATE",
-                      "calorieGoal": "MAINTAIN",
-                      "dailyCalorieTargetKcal": 2000
+                      "calorieGoal": "MAINTAIN"
                     }
                     """.trimIndent(),
                 ),
         )
             .andExpect(status().isOk)
+
+        mockMvc.perform(
+            post("/api/me/goals")
+                .withBearer(accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "goalType": "DAILY_CALORIES",
+                      "title": "Daily calories",
+                      "initialValue": 0.0,
+                      "targetValue": 2000.0,
+                      "startDate": "2026-06-01"
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isCreated)
 
         val mealTypeId = mockMvc.perform(get("/api/me/nutrition/meal-types").withBearer(accessToken))
             .andExpect(status().isOk)
@@ -302,7 +319,7 @@ class NutritionApiIntegrationTest : ApiIntegrationTest() {
             .andExpect(jsonPath("$.totalFatG").value(3.5))
             .andExpect(jsonPath("$.totalCarbsG").value(33.5))
             .andExpect(jsonPath("$.targetCaloriesKcal").value(2000.0))
-            .andExpect(jsonPath("$.calorieTargetSource").value("EXPLICIT_DAILY_TARGET"))
+            .andExpect(jsonPath("$.calorieTargetSource").value("USER_GOAL"))
             .andExpect(jsonPath("$.remainingCaloriesKcal").value(1810.0))
 
         mockMvc.perform(

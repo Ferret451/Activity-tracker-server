@@ -72,6 +72,37 @@ class GoalApiIntegrationTest : ApiIntegrationTest() {
     }
 
     @Test
+    fun `daily activity goal types can be created`() {
+        val accessToken = registerUser("goal-activity").accessToken
+
+        listOf(
+            "DAILY_STEPS" to 10000.0,
+            "DAILY_WALKING_MINUTES" to 60.0,
+            "DAILY_BURNED_CALORIES_KCAL" to 500.0,
+        ).forEach { (goalType, targetValue) ->
+            mockMvc.perform(
+                post("/api/me/goals")
+                    .withBearer(accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "goalType": "$goalType",
+                          "title": "Daily $goalType",
+                          "initialValue": 0.0,
+                          "targetValue": $targetValue,
+                          "startDate": "${LocalDate.now()}"
+                        }
+                        """.trimIndent(),
+                    ),
+            )
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.goalType").value(goalType))
+                .andExpect(jsonPath("$.targetValue").value(targetValue))
+        }
+    }
+
+    @Test
     fun `goals validation returns 400`() {
         val accessToken = registerUser("goal-val").accessToken
 

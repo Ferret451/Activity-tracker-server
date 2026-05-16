@@ -1,6 +1,7 @@
 package com.bsuir.Activity_tracker_server.activity
 
 import com.bsuir.Activity_tracker_server.support.ApiIntegrationTest
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
@@ -35,13 +36,21 @@ class ActivityApiIntegrationTest : ApiIntegrationTest() {
         )
             .andExpect(status().isOk)
 
-        val typeId = mockMvc.perform(get("/api/me/activity/types").withBearer(accessToken))
+        val typesNode = mockMvc.perform(get("/api/me/activity/types").withBearer(accessToken))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").isNotEmpty)
             .andReturn()
             .response
             .contentAsString
-            .let { objectMapper.readTree(it).path(0).path("id").asText() }
+            .let { objectMapper.readTree(it) }
+
+        assertTrue(typesNode.size() >= 20, "Expected at least 20 default activity types")
+        val typeNames = typesNode.map { it.path("name").asText() }.toSet()
+        assertTrue("Walking" in typeNames)
+        assertTrue("Running, moderate" in typeNames)
+        assertTrue("Swimming, leisure" in typeNames)
+        assertTrue("Sitting" in typeNames)
+
+        val typeId = typesNode.first { it.path("name").asText() == "Walking" }.path("id").asText()
 
         val recordId = mockMvc.perform(
             post("/api/me/activity/records")
