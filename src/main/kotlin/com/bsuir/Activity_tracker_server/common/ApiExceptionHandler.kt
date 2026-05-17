@@ -4,6 +4,7 @@ import com.bsuir.Activity_tracker_server.activity.exception.ActiveWorkoutAlready
 import com.bsuir.Activity_tracker_server.activity.exception.InvalidWorkoutSessionStateException
 import com.bsuir.Activity_tracker_server.activity.exception.WorkoutSessionNotFoundException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityRecordNotFoundException
+import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeDoesNotSupportDistanceException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeInUseException
 import com.bsuir.Activity_tracker_server.activity.exception.ActivityTypeNotFoundException
 import com.bsuir.Activity_tracker_server.activity.exception.DuplicateActivityTypeException
@@ -60,6 +61,15 @@ class ApiExceptionHandler {
     @ExceptionHandler(ActivityTypeInUseException::class)
     fun handleActivityTypeInUse(exception: ActivityTypeInUseException): ProblemDetail =
         buildProblemDetail(HttpStatus.CONFLICT, exception.message ?: "Activity type is used by existing records")
+
+    @ExceptionHandler(ActivityTypeDoesNotSupportDistanceException::class)
+    fun handleActivityTypeDoesNotSupportDistance(
+        exception: ActivityTypeDoesNotSupportDistanceException,
+    ): ProblemDetail =
+        buildProblemDetail(
+            HttpStatus.BAD_REQUEST,
+            exception.message ?: "Activity type does not support distance or GPS route",
+        )
 
     @ExceptionHandler(MealTypeNotFoundException::class)
     fun handleMealTypeNotFound(exception: MealTypeNotFoundException): ProblemDetail =

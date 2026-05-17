@@ -22,6 +22,9 @@ class ActivityType(
     @Column(name = "met", nullable = false)
     var met: Double,
 
+    @Column(name = "supports_distance", nullable = false)
+    var supportsDistance: Boolean = false,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: OffsetDateTime? = null,
 

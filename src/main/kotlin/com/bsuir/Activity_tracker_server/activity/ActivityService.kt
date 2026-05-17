@@ -34,6 +34,7 @@ class ActivityService(
         val activityType = ActivityType(
             name = normalizedName,
             met = request.met,
+            supportsDistance = request.supportsDistance,
         )
 
         return activityTypeRepository.save(activityType).toResponse()
@@ -55,6 +56,7 @@ class ActivityService(
 
         type.name = normalizedName
         type.met = request.met
+        type.supportsDistance = request.supportsDistance
 
         return activityTypeRepository.save(type).toResponse()
     }
@@ -76,6 +78,7 @@ class ActivityService(
         val profile = userProfileRepository.findByIdOrNull(userId)
             ?: throw ProfileNotFoundException(userId)
         val activityType = findTypeById(request.activityTypeId)
+        activityType.requireSupportsDistance(request.distanceKm)
 
         val burnedCalories = ActivityCaloriesCalculator.calculate(
             weightKg = profile.weightKg,
@@ -112,6 +115,7 @@ class ActivityService(
         val profile = userProfileRepository.findByIdOrNull(userId)
             ?: throw ProfileNotFoundException(userId)
         val activityType = findTypeById(request.activityTypeId)
+        activityType.requireSupportsDistance(request.distanceKm)
 
         record.activityType = activityType
         record.durationMinutes = request.durationMinutes
@@ -186,6 +190,7 @@ class ActivityService(
         id = id,
         name = name,
         met = met,
+        supportsDistance = supportsDistance,
         updatedAt = requireNotNull(updatedAt),
     )
 

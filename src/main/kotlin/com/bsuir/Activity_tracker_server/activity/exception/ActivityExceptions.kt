@@ -23,3 +23,6 @@ class ActiveWorkoutAlreadyExistsException :
 class InvalidWorkoutSessionStateException(message: String) :
     RuntimeException(message)
 
+class ActivityTypeDoesNotSupportDistanceException(activityTypeName: String) :
+    RuntimeException("Activity type '$activityTypeName' does not support distance or GPS route")
+

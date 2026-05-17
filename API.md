@@ -563,7 +563,45 @@
 
 Каталог **общий** для всех пользователей. **`POST` / `PUT` / `DELETE`** — только **`SCOPE_ADMIN`**.
 
-При развёртывании Flyway заполняет справочник **24** типами активности (миграция `V23__seed_default_activity_types.sql`, с учётом `Walking` из `V18`): ходьба (`Walking`, `Walking, light`, `Walking, brisk`), бег (`Jogging`, `Running, moderate`), плавание (`Swimming, leisure`, `Swimming, moderate`), активности без движения с низким MET (`Sitting`, `Meditation`, `Reading`, `Resting`), а также велосипед, походы, эллипс, гребля, танцы, HIIT, командные виды спорта, йога, растяжка, силовые. Уникальность: пара `(name, met)` без учёта регистра и пробелов по краям.
+При развёртывании Flyway заполняет справочник **24** типами активности (миграция `V23__seed_default_activity_types.sql`, с учётом `Walking` из `V18`). Уникальность: пара `(name, met)` без учёта регистра и пробелов по краям.
+
+**Поле `supportsDistance`** (колонка `supports_distance`, миграция `V24__activity_type_supports_distance.sql`):
+
+| Значение | Смысл | `distanceKm` в записи | GPS (`route-points`) в тренировке |
+|----------|--------|----------------------|-----------------------------------|
+| `true` | Тип **с поддержкой расстояния** | опционально | опционально |
+| `false` | Тип **без расстояния** | запрещено (`400`) | запрещено (`400`) |
+
+Для типов с `supportsDistance = true` ни километраж, ни маршрут не обязательны — достаточно длительности.
+
+**Каталог по умолчанию (24 типа):**
+
+| name | met | supportsDistance |
+|------|-----|------------------|
+| Walking | 3.5 | да |
+| Walking, light | 2.5 | да |
+| Walking, brisk | 4.3 | да |
+| Jogging | 7.0 | да |
+| Running, moderate | 9.8 | да |
+| Swimming, leisure | 6.0 | да |
+| Swimming, moderate | 8.0 | да |
+| Cycling, leisure | 4.0 | да |
+| Cycling, moderate | 6.8 | да |
+| Hiking | 6.0 | да |
+| Elliptical trainer | 5.0 | да |
+| Rowing, moderate | 7.0 | да |
+| Dancing | 5.0 | да |
+| HIIT | 8.0 | да |
+| Basketball | 6.5 | да |
+| Soccer | 7.0 | да |
+| Tennis | 7.3 | да |
+| Sitting | 1.5 | нет |
+| Meditation | 1.0 | нет |
+| Reading | 1.3 | нет |
+| Resting | 1.0 | нет |
+| Yoga | 2.5 | нет |
+| Stretching | 2.3 | нет |
+| Weight training | 5.0 | нет |
 
 #### `POST /api/me/activity/types`
 
@@ -577,6 +615,7 @@
 |------|-----|-------|-------------|
 | `name` | string | да | не пустой, max 80 |
 | `met` | number | да | ≥ 0.1 (`@DecimalMin("0.1")`) |
+| `supportsDistance` | boolean | да | см. таблицу каталога выше |
 
 #### `GET /api/me/activity/types`
 
@@ -621,7 +660,7 @@
 |------|-----|-------|-------------|
 | `activityTypeId` | UUID | да | — |
 | `durationMinutes` | integer | да | > 0 |
-| `distanceKm` | number | нет | ≥ 0, если передан |
+| `distanceKm` | number | нет | ≥ 0, если передан; только при `supportsDistance` у типа |
 | `note` | string | нет | max 500 |
 | `occurredAt` | OffsetDateTime | нет | если не передан — **текущий момент UTC** |
 
@@ -655,7 +694,7 @@
 |------|-----|-------|-------------|
 | `activityTypeId` | UUID | да | — |
 | `durationMinutes` | integer | да | > 0 |
-| `distanceKm` | number | нет | ≥ 0 |
+| `distanceKm` | number | нет | ≥ 0; только при `supportsDistance` у типа |
 | `note` | string | нет | max 500 |
 | `occurredAt` | OffsetDateTime | **да** | момент события |
 
@@ -696,6 +735,8 @@
 
 Префикс: **`/api/me/activity/workouts`**. Одновременно может быть не более **одной** активной сессии на пользователя (иначе **`409 Conflict`** при старте).
 
+**Маршрут и `distanceKm` при завершении** доступны только если у типа сессии `activityType.supportsDistance === true`. Для типов без расстояния (йога, силовые и т.д.) вызов `POST .../route-points`, передача `distanceKm` в `stop` и создание записи с км приведут к **`400 Bad Request`**. Для типов с расстоянием GPS и километраж **необязательны**.
+
 #### `POST /api/me/activity/workouts/start` — `201`, **WorkoutSessionResponse**
 
 **Тело — StartWorkoutRequest:** `activityTypeId` (UUID).
@@ -706,13 +747,15 @@
 
 #### `POST /api/me/activity/workouts/{sessionId}/route-points` — `204`
 
+Только для сессии с типом, у которого `supportsDistance === true` (иначе **`400`**).
+
 **Тело — AppendWorkoutRoutePointsRequest:** `points` — массив объектов с полями `latitude`, `longitude`, опционально `recordedAt` (иначе — текущий UTC). Не более **500** точек за один запрос.
 
 #### `GET /api/me/activity/workouts/{sessionId}/route` — `200`, массив **WorkoutRoutePointResponse**
 
 #### `POST /api/me/activity/workouts/{sessionId}/stop` — `200`, WorkoutSessionResponse
 
-**Тело — StopWorkoutRequest** (необязательно): `distanceKm`, `note`, `endedAt`. Создаётся запись активности (`ActivityRecord`) с длительностью по разнице `startedAt` и `endedAt` (минимум 1 минута), калории считаются по MET и весу из профиля (как при ручном создании записи).
+**Тело — StopWorkoutRequest** (необязательно): `distanceKm` (только при `supportsDistance` у типа), `note`, `endedAt`. Создаётся запись активности (`ActivityRecord`) с длительностью по разнице `startedAt` и `endedAt` (минимум 1 минута), калории считаются по MET и весу из профиля (как при ручном создании записи).
 
 #### `POST /api/me/activity/workouts/{sessionId}/cancel` — `200`, WorkoutSessionResponse
 

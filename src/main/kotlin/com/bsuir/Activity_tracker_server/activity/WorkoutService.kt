@@ -60,6 +60,7 @@ class WorkoutService(
         if (session.status != WorkoutSessionStatus.ACTIVE) {
             throw InvalidWorkoutSessionStateException("Route points can only be added to an active session")
         }
+        session.activityType.requireSupportsDistanceForRoute()
         require(request.points.size <= 500) { "At most 500 points per request" }
         var nextSeq = workoutRoutePointRepository.findMaxPointSeq(sessionId) + 1
         val now = OffsetDateTime.now(ZoneOffset.UTC)
@@ -97,6 +98,8 @@ class WorkoutService(
         if (session.status != WorkoutSessionStatus.ACTIVE) {
             throw InvalidWorkoutSessionStateException("Session is not active")
         }
+        session.activityType.requireSupportsDistance(request?.distanceKm)
+
         val endedAt = request?.endedAt ?: OffsetDateTime.now(ZoneOffset.UTC)
         var durationMinutes = ChronoUnit.MINUTES.between(session.startedAt, endedAt).toInt()
         durationMinutes = max(1, durationMinutes)
@@ -156,6 +159,7 @@ class WorkoutService(
             id = id,
             name = name,
             met = met,
+            supportsDistance = supportsDistance,
             updatedAt = requireNotNull(updatedAt),
         )
 }

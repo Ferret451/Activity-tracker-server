@@ -15,6 +15,8 @@ data class CreateActivityTypeRequest(
 
     @field:DecimalMin(value = "0.1")
     val met: Double,
+
+    val supportsDistance: Boolean,
 )
 
 data class UpdateActivityTypeRequest(
@@ -24,12 +26,15 @@ data class UpdateActivityTypeRequest(
 
     @field:DecimalMin(value = "0.1")
     val met: Double,
+
+    val supportsDistance: Boolean,
 )
 
 data class ActivityTypeResponse(
     val id: UUID,
     val name: String,
     val met: Double,
+    val supportsDistance: Boolean,
     val updatedAt: OffsetDateTime,
 )
 
